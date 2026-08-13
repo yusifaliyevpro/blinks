@@ -15,12 +15,14 @@
     "lint:fix": "oxlint --fix"
   },
   "dependencies": {
+    "@upstash/redis": "1.38.2",
     "hash-wasm": "4.12.0",
     "motion": "13.1.0",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-icons": "5.7.0"
+    "react-icons": "5.7.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
