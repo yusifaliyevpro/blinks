@@ -15,8 +15,10 @@
     "lint:fix": "oxlint --fix"
   },
   "dependencies": {
+    "@upstash/ratelimit": "2.0.8",
     "@upstash/redis": "1.38.2",
     "hash-wasm": "4.12.0",
+    "link-preview-js": "5.0.0",
     "motion": "13.1.0",
     "next": "16.3.0",
     "react": "19.2.8",
@@ -32,6 +34,7 @@
     "greenly": "1.1.5",
     "oxfmt": "0.63.0",
     "oxlint": "1.78.0",
+    "oxlint-tsgolint": "7.0.2001",
     "postcss-load-config": "6.0.1",
     "react-doctor": "0.9.11",
     "tailwindcss": "4.3.3",
