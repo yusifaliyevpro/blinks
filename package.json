@@ -1,0 +1,39 @@
+{
+  "name": "blinks",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "check": "greenly",
+    "react-doctor": "react-doctor --verbose",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
+  },
+  "dependencies": {
+    "hash-wasm": "4.12.0",
+    "motion": "13.1.0",
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-icons": "5.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "greenly": "1.1.5",
+    "oxfmt": "0.63.0",
+    "oxlint": "1.78.0",
+    "postcss-load-config": "6.0.1",
+    "react-doctor": "0.9.11",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@11.21.0"
+}
