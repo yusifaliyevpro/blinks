@@ -47,5 +47,15 @@ export function VaultApp() {
     return <PasswordScreen onUnlock={(u) => setPhase({ kind: "unlocked", ...u })} />;
   }
 
-  return <LinksView session={phase.session} initialLinks={phase.links} initialVersion={phase.version} />;
+  return (
+    <LinksView
+      session={phase.session}
+      initialLinks={phase.links}
+      initialVersion={phase.version}
+      onLogout={() => {
+        clearSession();
+        setPhase({ kind: "locked" });
+      }}
+    />
+  );
 }

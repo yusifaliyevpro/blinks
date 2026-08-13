@@ -2,6 +2,7 @@
 
 import { AnimatePresence } from "motion/react";
 import { startTransition, useOptimistic, useRef, useState } from "react";
+import { FiLogOut } from "react-icons/fi";
 import * as z from "zod/mini";
 import { fetchMetadata, putBlob } from "@/lib/actions";
 import { decryptJSON, encryptJSON, type Session } from "@/lib/crypto";
@@ -50,10 +51,12 @@ export function LinksView({
   session,
   initialLinks,
   initialVersion,
+  onLogout,
 }: {
   session: Session;
   initialLinks: LinkItem[];
   initialVersion: number;
+  onLogout: () => void;
 }) {
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [optimistic, applyOptimistic] = useOptimistic<DisplayLink[], OptimisticAction>(links, reducer);
@@ -171,6 +174,17 @@ export function LinksView({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:py-16">
+      <button
+        type="button"
+        onClick={onLogout}
+        aria-label="Log out"
+        title="Log out"
+        className="fixed top-4 right-4 z-10 flex items-center gap-1.5 rounded-lg border border-border bg-panel/80 px-2.5 py-1.5 text-xs text-muted backdrop-blur transition-colors hover:bg-hover hover:text-text focus:outline-none"
+      >
+        <FiLogOut className="h-4 w-4" />
+        Log out
+      </button>
+
       <form onSubmit={handleAdd}>
         <input
           type="text"

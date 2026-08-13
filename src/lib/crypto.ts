@@ -161,3 +161,30 @@ export function clearSession(): void {
   sessionStorage.removeItem(SS_ID);
   sessionStorage.removeItem(SS_KEY);
 }
+
+// --- Random password generator ---
+
+const PASSWORD_CHARSET =
+  "abcdefghijklmnopqrstuvwxyz" +
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+  "0123456789" +
+  "!@#$%^&*()-_=+[]{}|;:,.<>?/~";
+
+// CSPRNG-backed, uniform over the charset (rejection sampling removes modulo
+// bias). 200 chars over this ~90-symbol set ≈ 1290 bits of entropy.
+export function generatePassword(length = 200): string {
+  const chars = PASSWORD_CHARSET;
+  const n = chars.length;
+  const limit = Math.floor(0x1_0000_0000 / n) * n; // largest unbiased uint32
+  const out: string[] = [];
+  const buf = new Uint32Array(256);
+
+  while (out.length < length) {
+    crypto.getRandomValues(buf);
+    for (let i = 0; i < buf.length && out.length < length; i++) {
+      const v = buf[i];
+      if (v < limit) out.push(chars[v % n]);
+    }
+  }
+  return out.join("");
+}
