@@ -62,9 +62,6 @@ html {
   /* Reserve the scrollbar track always, so content never shifts when it
      appears/disappears between pages. */
   scrollbar-gutter: stable;
-  /* Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
 }
 
 body {
