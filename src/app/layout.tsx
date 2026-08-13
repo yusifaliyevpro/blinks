@@ -1,6 +1,6 @@
 import "@/lib/env.server";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Instrument_Serif, Inter } from "next/font/google";
 import "./globals.css";
 
 // Self-hosted at build time (no runtime external font request).
@@ -10,8 +10,15 @@ const inter = Inter({
   weight: "variable",
 });
 
+// Display face for the wordmark.
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument",
+  subsets: ["latin"],
+  weight: "400",
+});
+
 export const metadata: Metadata = {
-  title: " ",
+  title: "Blinks",
   robots: {
     index: false,
     follow: false,
@@ -22,7 +29,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${instrumentSerif.variable} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );

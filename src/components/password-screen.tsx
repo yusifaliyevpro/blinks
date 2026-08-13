@@ -48,7 +48,10 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center p-6">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-7 p-6">
+      <h1 className="font-display text-6xl leading-none tracking-tight text-text select-none">
+        Blinks
+      </h1>
       <form onSubmit={submit} className="w-full max-w-xs">
         <input
           type="password"

@@ -6,12 +6,13 @@ import type { NextConfig } from "next";
 // scripts run. `'unsafe-inline'` is required for Next's inline bootstrap; it's
 // not a practical risk here since the app renders no user-supplied HTML (React
 // escapes everything, no dangerouslySetInnerHTML, no eval of link data).
-// `'unsafe-eval'` is dev-only (React Fast Refresh needs it).
+// `'wasm-unsafe-eval'` lets the Argon2id WASM (hash-wasm) compile without
+// opening general JS eval. `'unsafe-eval'` is dev-only (React Fast Refresh).
 const isDev = process.env.NODE_ENV !== "production";
 
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https: data: blob:",
   "font-src 'self'",
