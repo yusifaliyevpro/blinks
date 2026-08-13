@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FiCheck, FiEye, FiEyeOff, FiRefreshCw } from "react-icons/fi";
 import { getBlob } from "@/lib/actions";
 import { decryptJSON, deriveVault, generatePassword, saveSession, type Session } from "@/lib/crypto";
+import { allowPasswordManagers } from "@/lib/env.client";
 import type { LinkItem } from "@/lib/types";
 
 export type Unlocked = {
@@ -18,6 +19,7 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
   const [shake, setShake] = useState(false);
   const [copied, setCopied] = useState(false);
   const [show, setShow] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -50,11 +52,17 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
     }
   }
 
+  function toggleShow() {
+    setShow((s) => !s);
+    inputRef.current?.focus();
+  }
+
   function generate() {
     if (busy) return;
     const pw = generatePassword(200);
     setPassword(pw);
     setShake(false);
+    inputRef.current?.focus();
     // Copy so it can be saved to a password manager — it's the only key.
     if (navigator.clipboard) {
       void navigator.clipboard
@@ -76,18 +84,19 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
 
         <div className="relative">
           <input
+            ref={inputRef}
             type={show ? "text" : "password"}
             autoFocus
-            autoComplete="off"
+            autoComplete={allowPasswordManagers ? "current-password" : "off"}
             spellCheck={false}
             disabled={busy}
             value={password}
             placeholder="Password"
-            // Discourage password managers from touching this field.
-            data-1p-ignore
-            data-lpignore="true"
-            data-bwignore="true"
-            data-form-type="other"
+            // Discourage password managers unless NEXT_PUBLIC_ALLOW_PASSWORD_MANAGERS is set.
+            data-1p-ignore={allowPasswordManagers ? undefined : true}
+            data-lpignore={allowPasswordManagers ? undefined : "true"}
+            data-bwignore={allowPasswordManagers ? undefined : "true"}
+            data-form-type={allowPasswordManagers ? undefined : "other"}
             onChange={(e) => setPassword(e.target.value)}
             onAnimationEnd={() => setShake(false)}
             aria-invalid={shake}
@@ -99,7 +108,7 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => setShow((s) => !s)}
+              onClick={toggleShow}
               aria-label={show ? "Hide password" : "Show password"}
               title={show ? "Hide password" : "Show password"}
               aria-pressed={show}
