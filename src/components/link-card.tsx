@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { FiLoader, FiTrash2 } from "react-icons/fi";
+import { FiCheck, FiLoader, FiTrash2 } from "react-icons/fi";
 import type { LinkItem } from "@/lib/types";
 
 export type DisplayLink = LinkItem & { pending?: boolean };
@@ -37,18 +37,39 @@ export function LinkCard({
 }) {
   const [imageOk, setImageOk] = useState(true);
   const [pulsing, setPulsing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showImage = Boolean(link.image) && imageOk;
 
   // Re-runs whenever the pulse nonce changes (i.e. the same link was pasted
   // again): flash the card and bring it into view to say "I'm already here".
   useEffect(() => {
-    if (!pulse) return;
+    if (!pulse) return undefined;
     ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     setPulsing(true);
     const timer = setTimeout(() => setPulsing(false), 650);
     return () => clearTimeout(timer);
   }, [pulse]);
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(confirmTimer.current ?? undefined);
+    };
+  }, []);
+
+  // Two-step delete: first click arms it (shows a confirm icon), a second click
+  // within 3s actually deletes — otherwise it disarms itself.
+  function handleDeleteClick() {
+    if (confirming) {
+      clearTimeout(confirmTimer.current ?? undefined);
+      setConfirming(false);
+      onDelete(link.id);
+      return;
+    }
+    setConfirming(true);
+    confirmTimer.current = setTimeout(() => setConfirming(false), 3000);
+  }
 
   return (
     <motion.li
@@ -77,9 +98,7 @@ export function LinkCard({
           ) : (
             <>
               <p className="truncate font-medium text-text">{link.title}</p>
-              {link.description && (
-                <p className="mt-1 line-clamp-2 text-sm text-muted">{link.description}</p>
-              )}
+              {link.description && <p className="mt-1 line-clamp-2 text-sm text-muted">{link.description}</p>}
               <p className="mt-1.5 truncate text-xs text-muted/60">{prettyUrl(link.url)}</p>
             </>
           )}
@@ -92,18 +111,27 @@ export function LinkCard({
             alt=""
             loading="lazy"
             onError={() => setImageOk(false)}
-            className="aspect-[1200/630] w-40 shrink-0 rounded-lg border border-border/60 object-cover sm:w-52"
+            className="aspect-1200/630 w-40 shrink-0 rounded-lg border border-border/60 object-cover sm:w-52"
           />
         )}
       </a>
 
       <button
         type="button"
-        aria-label="Delete link"
-        onClick={() => onDelete(link.id)}
-        className="flex shrink-0 items-center justify-center rounded-xl border border-border bg-panel px-3 text-muted transition-colors hover:border-red-500/40 hover:bg-hover hover:text-red-400"
+        // Never keyboard-reachable: no tab stop, and no focus on click — so an
+        // accidental double keypress can't ever delete a link.
+        tabIndex={-1}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleDeleteClick}
+        aria-label={confirming ? "Confirm delete" : "Delete link"}
+        title={confirming ? "Click again to delete" : "Delete link"}
+        className={`flex shrink-0 items-center justify-center rounded-xl border px-3 transition-colors ${
+          confirming
+            ? "border-red-500/50 bg-red-500/10 text-red-400"
+            : "border-border bg-panel text-muted hover:border-red-500/40 hover:bg-hover hover:text-red-400"
+        }`}
       >
-        <FiTrash2 className="h-4 w-4" />
+        {confirming ? <FiCheck className="h-4 w-4" /> : <FiTrash2 className="h-4 w-4" />}
       </button>
     </motion.li>
   );

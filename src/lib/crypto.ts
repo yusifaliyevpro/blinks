@@ -110,8 +110,11 @@ export async function deriveVault(password: string): Promise<Vault> {
 
   const master = await crypto.subtle.importKey("raw", ab(masterBytes), "HKDF", false, ["deriveBits"]);
 
-  const encKeyBytes = await hkdf(master, argonSalt, ENC_INFO, 256);
-  const blobIdBytes = await hkdf(master, argonSalt, ID_INFO, 256);
+  // Independent derivations from the same key — race them instead of waterfalling.
+  const [encKeyBytes, blobIdBytes] = await Promise.all([
+    hkdf(master, argonSalt, ENC_INFO, 256),
+    hkdf(master, argonSalt, ID_INFO, 256),
+  ]);
 
   const key = await importAesKey(encKeyBytes);
   return { blobId: toHex(blobIdBytes), key, encKeyBytes };

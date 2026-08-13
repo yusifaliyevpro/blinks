@@ -8,7 +8,7 @@ export const ciphertextSchema = z.string().min(1).max(3_000_000);
 
 export const versionSchema = z.number().int().min(0);
 
-export const urlSchema = z.string().url().max(2048);
+export const urlSchema = z.url().max(2048);
 
 export const putBlobSchema = z.object({
   blobId: blobIdSchema,

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence } from "motion/react";
-import { startTransition, useOptimistic, useRef, useState } from "react";
+import { startTransition, useEffect, useOptimistic, useRef, useState } from "react";
 import { FiLogOut } from "react-icons/fi";
 import * as z from "zod/mini";
 import { fetchMetadata, putBlob } from "@/lib/actions";
@@ -69,6 +69,24 @@ export function LinksView({
   const linksRef = useRef(links);
   linksRef.current = links;
   const versionRef = useRef(initialVersion);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Pressing Enter while nothing (or a non-interactive element) is focused jumps
+  // back to the link input — so you can keep adding without reaching for it.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Enter") return;
+      const el = document.activeElement;
+      if (el === inputRef.current) return;
+      const tag = el?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "A") return;
+      if (el instanceof HTMLElement && el.isContentEditable) return;
+      e.preventDefault();
+      inputRef.current?.focus();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // Encrypt the whole array and write it under optimistic concurrency control.
   // On a version conflict, re-fetch the latest, re-apply the same logical
@@ -187,6 +205,7 @@ export function LinksView({
 
       <form onSubmit={handleAdd}>
         <input
+          ref={inputRef}
           type="text"
           inputMode="url"
           autoComplete="off"
