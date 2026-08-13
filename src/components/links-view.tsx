@@ -35,6 +35,17 @@ function normalizeUrl(input: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
+// Canonical form for matching an already-saved link: lowercased host, trailing
+// slash dropped, so minor cosmetic differences still count as the same link.
+function canonicalKey(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.host.toLowerCase()}${u.pathname.replace(/\/$/, "")}${u.search}`;
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
+
 export function LinksView({
   session,
   initialLinks,
@@ -49,6 +60,8 @@ export function LinksView({
   const [input, setInput] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Which card to pulse, and a nonce so re-pasting the same link re-triggers it.
+  const [pulse, setPulse] = useState<{ id: string; n: number } | null>(null);
 
   const linksRef = useRef(links);
   linksRef.current = links;
@@ -99,6 +112,14 @@ export function LinksView({
     setInput("");
     setInvalid(false);
     setError(null);
+
+    // Already saved? Don't add again — pulse the existing card instead.
+    const key = canonicalKey(url);
+    const existing = linksRef.current.find((l) => canonicalKey(l.url) === key);
+    if (existing) {
+      setPulse((p) => ({ id: existing.id, n: (p?.n ?? 0) + 1 }));
+      return;
+    }
 
     startTransition(async () => {
       const placeholder: DisplayLink = {
@@ -186,7 +207,12 @@ export function LinksView({
         <ul className="mt-6 space-y-2">
           <AnimatePresence initial={false} mode="popLayout">
             {optimistic.map((link) => (
-              <LinkCard key={link.id} link={link} onDelete={handleDelete} />
+              <LinkCard
+                key={link.id}
+                link={link}
+                onDelete={handleDelete}
+                pulse={pulse && pulse.id === link.id ? pulse.n : 0}
+              />
             ))}
           </AnimatePresence>
         </ul>

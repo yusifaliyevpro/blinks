@@ -62,6 +62,16 @@ function fallbackTitle(url: string): string {
   }
 }
 
+// Sites behind bot protection (Cloudflare, DDoS-Guard, …) serve an interstitial
+// challenge page to datacenter IPs instead of the real content. Its title is
+// junk like "Just a moment…" — detect it so we don't store it as the link title.
+const CHALLENGE_TITLE =
+  /^(just a moment|attention required|access denied|checking your browser|verifying you are human|please wait|security check|are you a robot|ddos-guard|один момент)/i;
+
+function looksLikeBotChallenge(title: string): boolean {
+  return CHALLENGE_TITLE.test(title.trim());
+}
+
 export async function fetchMetadata(url: string): Promise<LinkMetadata> {
   const clean = urlSchema.parse(url);
   await rateLimit(metadataLimiter);
@@ -77,7 +87,14 @@ export async function fetchMetadata(url: string): Promise<LinkMetadata> {
       resolveDNSHost: resolvePublicHost,
     });
 
-    const title = ("title" in preview && preview.title) || fallbackTitle(clean);
+    const rawTitle = "title" in preview ? (preview.title ?? "") : "";
+    if (looksLikeBotChallenge(rawTitle)) {
+      // Bot-protection interstitial — there's no real metadata to read from a
+      // datacenter IP. Fall back to the hostname instead of the junk title.
+      return { title: fallbackTitle(clean), description: "", image: "" };
+    }
+
+    const title = rawTitle || fallbackTitle(clean);
     const description = "description" in preview ? (preview.description ?? "") : "";
     const image = "images" in preview && preview.images.length > 0 ? preview.images[0] : "";
 

@@ -36,13 +36,60 @@
   }
 }
 
+/* "I'm already here" nudge: an accent ring that expands and fades, twice. */
+@keyframes pulse-highlight {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  15%,
+  65% {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 45%, transparent);
+  }
+  40%,
+  90% {
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+.pulse-highlight {
+  animation: pulse-highlight 0.65s ease-out;
+}
+
 html {
   color-scheme: dark;
+  /* Reserve the scrollbar track always, so content never shifts when it
+     appears/disappears between pages. */
+  scrollbar-gutter: stable;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+}
+
+/* WebKit / Chromium: a slim, muted pill that matches the dark UI. Scoping to
+   `html` gives a custom scrollbar with no arrow buttons at the ends. */
+html::-webkit-scrollbar {
+  width: 10px;
+}
+
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+  /* Border in the page color insets the thumb into a thin, floating pill. */
+  border: 2px solid var(--color-bg);
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
 }
 
 ::selection {

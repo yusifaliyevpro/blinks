@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiLoader, FiTrash2 } from "react-icons/fi";
 import type { LinkItem } from "@/lib/types";
 
@@ -26,12 +26,33 @@ function prettyUrl(url: string): string {
   }
 }
 
-export function LinkCard({ link, onDelete }: { link: DisplayLink; onDelete: (id: string) => void }) {
+export function LinkCard({
+  link,
+  onDelete,
+  pulse = 0,
+}: {
+  link: DisplayLink;
+  onDelete: (id: string) => void;
+  pulse?: number;
+}) {
   const [imageOk, setImageOk] = useState(true);
+  const [pulsing, setPulsing] = useState(false);
+  const ref = useRef<HTMLLIElement>(null);
   const showImage = Boolean(link.image) && imageOk;
+
+  // Re-runs whenever the pulse nonce changes (i.e. the same link was pasted
+  // again): flash the card and bring it into view to say "I'm already here".
+  useEffect(() => {
+    if (!pulse) return;
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    setPulsing(true);
+    const timer = setTimeout(() => setPulsing(false), 650);
+    return () => clearTimeout(timer);
+  }, [pulse]);
 
   return (
     <motion.li
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 8, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -43,7 +64,9 @@ export function LinkCard({ link, onDelete }: { link: DisplayLink; onDelete: (id:
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex min-w-0 flex-1 items-center gap-4 rounded-xl border border-border bg-panel p-3 transition-colors hover:bg-hover"
+        className={`group flex min-w-0 flex-1 items-center gap-4 rounded-xl border bg-panel p-3 transition-colors hover:bg-hover ${
+          pulsing ? "pulse-highlight border-accent/60" : "border-border"
+        }`}
       >
         <div className="min-w-0 flex-1">
           {link.pending && !link.title ? (
