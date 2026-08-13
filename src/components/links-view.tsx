@@ -2,10 +2,25 @@
 
 import { AnimatePresence } from "motion/react";
 import { startTransition, useOptimistic, useRef, useState } from "react";
+import * as z from "zod/mini";
 import { fetchMetadata, putBlob } from "@/lib/actions";
 import { decryptJSON, encryptJSON, type Session } from "@/lib/crypto";
 import type { LinkItem } from "@/lib/types";
 import { LinkCard, type DisplayLink } from "./link-card";
+
+const urlSchema = z.url();
+
+// Accept a real link only: valid URL syntax and a dotted hostname (has a TLD),
+// so bare words like "hello" — which normalize into a technically-valid
+// https://hello — are rejected.
+function isValidLink(url: string): boolean {
+  if (!urlSchema.safeParse(url).success) return false;
+  try {
+    return new URL(url).hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
 
 type OptimisticAction = { type: "add"; item: DisplayLink } | { type: "remove"; id: string };
 
@@ -32,6 +47,7 @@ export function LinksView({
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [optimistic, applyOptimistic] = useOptimistic<DisplayLink[], OptimisticAction>(links, reducer);
   const [input, setInput] = useState("");
+  const [invalid, setInvalid] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const linksRef = useRef(links);
@@ -76,7 +92,12 @@ export function LinksView({
     event.preventDefault();
     const url = normalizeUrl(input);
     if (!url) return;
+    if (!isValidLink(url)) {
+      setInvalid(true);
+      return;
+    }
     setInput("");
+    setInvalid(false);
     setError(null);
 
     startTransition(async () => {
@@ -137,8 +158,15 @@ export function LinksView({
           spellCheck={false}
           placeholder="Paste a link, press Enter"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="w-full rounded-xl border border-border bg-panel px-4 py-3 text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70"
+          onChange={(e) => {
+            setInput(e.target.value);
+            setInvalid(false);
+          }}
+          onAnimationEnd={() => setInvalid(false)}
+          aria-invalid={invalid}
+          className={`w-full rounded-xl border bg-panel px-4 py-3 text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 ${
+            invalid ? "animate-shake border-red-500/70" : "border-border"
+          }`}
         />
       </form>
 

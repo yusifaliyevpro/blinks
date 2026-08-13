@@ -15,6 +15,17 @@ function hostOf(url: string): string {
   }
 }
 
+// Host + path, without protocol or trailing slash, for a compact URL line.
+function prettyUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const path = u.pathname === "/" ? "" : u.pathname.replace(/\/$/, "");
+    return u.hostname.replace(/^www\./, "") + path + u.search;
+  } catch {
+    return url;
+  }
+}
+
 export function LinkCard({ link, onDelete }: { link: DisplayLink; onDelete: (id: string) => void }) {
   const [imageOk, setImageOk] = useState(true);
   const showImage = Boolean(link.image) && imageOk;
@@ -26,12 +37,13 @@ export function LinkCard({ link, onDelete }: { link: DisplayLink; onDelete: (id:
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
       transition={{ duration: 0.2, ease: "easeOut" }}
+      className="flex items-stretch gap-2"
     >
       <a
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex items-center gap-4 rounded-xl border border-border bg-panel px-4 py-3.5 transition-colors hover:bg-hover"
+        className="group flex min-w-0 flex-1 items-center gap-4 rounded-xl border border-border bg-panel p-3 transition-colors hover:bg-hover"
       >
         <div className="min-w-0 flex-1">
           {link.pending && !link.title ? (
@@ -40,13 +52,13 @@ export function LinkCard({ link, onDelete }: { link: DisplayLink; onDelete: (id:
               <span className="text-sm">{hostOf(link.url)}</span>
             </div>
           ) : (
-            <p className="truncate font-medium text-text">{link.title}</p>
-          )}
-
-          {link.description ? (
-            <p className="mt-1 truncate text-sm text-muted">{link.description}</p>
-          ) : (
-            <p className="mt-1 truncate text-xs text-muted/70">{hostOf(link.url)}</p>
+            <>
+              <p className="truncate font-medium text-text">{link.title}</p>
+              {link.description && (
+                <p className="mt-1 line-clamp-2 text-sm text-muted">{link.description}</p>
+              )}
+              <p className="mt-1.5 truncate text-xs text-muted/60">{prettyUrl(link.url)}</p>
+            </>
           )}
         </div>
 
@@ -57,23 +69,19 @@ export function LinkCard({ link, onDelete }: { link: DisplayLink; onDelete: (id:
             alt=""
             loading="lazy"
             onError={() => setImageOk(false)}
-            className="h-14 w-14 shrink-0 rounded-lg border border-border/60 object-cover"
+            className="aspect-[1200/630] w-40 shrink-0 rounded-lg border border-border/60 object-cover sm:w-52"
           />
         )}
-
-        <button
-          type="button"
-          aria-label="Delete link"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onDelete(link.id);
-          }}
-          className="shrink-0 rounded-lg p-2 text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-elevated hover:text-red-400 focus:opacity-100 focus:outline-none"
-        >
-          <FiTrash2 className="h-4 w-4" />
-        </button>
       </a>
+
+      <button
+        type="button"
+        aria-label="Delete link"
+        onClick={() => onDelete(link.id)}
+        className="flex shrink-0 items-center justify-center rounded-xl border border-border bg-panel px-3 text-muted transition-colors hover:border-red-500/40 hover:bg-hover hover:text-red-400"
+      >
+        <FiTrash2 className="h-4 w-4" />
+      </button>
     </motion.li>
   );
 }
