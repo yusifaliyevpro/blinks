@@ -54,6 +54,7 @@
 
 .pulse-highlight {
   animation: pulse-highlight 0.65s ease-out;
+  border-color: color-mix(in oklab, var(--color-accent) 60%, var(--color-border));
 }
 
 html {

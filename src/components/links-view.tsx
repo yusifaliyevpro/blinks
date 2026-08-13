@@ -67,9 +67,14 @@ export function LinksView({
   const [pulse, setPulse] = useState<{ id: string; n: number } | null>(null);
 
   const linksRef = useRef(links);
-  linksRef.current = links;
   const versionRef = useRef(initialVersion);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Keep the latest-links ref in sync outside render (event handlers and the
+  // commit loop read linksRef.current to avoid stale closures).
+  useEffect(() => {
+    linksRef.current = links;
+  }, [links]);
 
   // Pressing Enter while nothing (or a non-interactive element) is focused jumps
   // back to the link input — so you can keep adding without reaching for it.

@@ -36,20 +36,29 @@ export function LinkCard({
   pulse?: number;
 }) {
   const [imageOk, setImageOk] = useState(true);
-  const [pulsing, setPulsing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
+  const cardRef = useRef<HTMLAnchorElement>(null);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showImage = Boolean(link.image) && imageOk;
 
   // Re-runs whenever the pulse nonce changes (i.e. the same link was pasted
   // again): flash the card and bring it into view to say "I'm already here".
+  // Driven imperatively via the DOM (no React state) so it can't cascade a
+  // render — the class is removed once the CSS animation ends.
   useEffect(() => {
     if (!pulse) return undefined;
+    const card = cardRef.current;
     ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    setPulsing(true);
-    const timer = setTimeout(() => setPulsing(false), 650);
-    return () => clearTimeout(timer);
+    if (!card) return undefined;
+
+    card.classList.remove("pulse-highlight");
+    void card.offsetWidth; // force reflow so the animation restarts on repeats
+    card.classList.add("pulse-highlight");
+
+    const onEnd = () => card.classList.remove("pulse-highlight");
+    card.addEventListener("animationend", onEnd, { once: true });
+    return () => card.removeEventListener("animationend", onEnd);
   }, [pulse]);
 
   useEffect(() => {
@@ -82,12 +91,11 @@ export function LinkCard({
       className="flex items-stretch gap-2"
     >
       <a
+        ref={cardRef}
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`group flex min-w-0 flex-1 items-center gap-4 rounded-xl border bg-panel p-3 transition-colors hover:bg-hover ${
-          pulsing ? "pulse-highlight border-accent/60" : "border-border"
-        }`}
+        className="group flex min-w-0 flex-1 items-center gap-4 rounded-xl border border-border bg-panel p-3 transition-colors hover:bg-hover"
       >
         <div className="min-w-0 flex-1">
           {link.pending && !link.title ? (

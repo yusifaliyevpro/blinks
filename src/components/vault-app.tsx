@@ -23,9 +23,16 @@ export function VaultApp() {
       }
       try {
         const blob = await getBlob(session.blobId);
-        const links = blob ? await decryptJSON<LinkItem[]>(session.key, blob.ciphertext) : [];
+        let links: LinkItem[] = [];
+        let version = 0;
+
+        if (blob) {
+          links = await decryptJSON<LinkItem[]>(session.key, blob.ciphertext);
+          version = blob.version;
+        }
+
         if (!cancelled) {
-          setPhase({ kind: "unlocked", session, links, version: blob?.version ?? 0 });
+          setPhase({ kind: "unlocked", session, links, version });
         }
       } catch {
         // Stored key no longer decrypts the blob — start over.

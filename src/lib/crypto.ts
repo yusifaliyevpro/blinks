@@ -167,11 +167,7 @@ export function clearSession(): void {
 
 // --- Random password generator ---
 
-const PASSWORD_CHARSET =
-  "abcdefghijklmnopqrstuvwxyz" +
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-  "0123456789" +
-  "!@#$%^&*()-_=+[]{}|;:,.<>?/~";
+const PASSWORD_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}|;:,.<>?/~";
 
 // CSPRNG-backed, uniform over the charset (rejection sampling removes modulo
 // bias). 200 chars over this ~90-symbol set ≈ 1290 bits of entropy.

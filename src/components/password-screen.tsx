@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { FiCheck, FiEye, FiEyeOff, FiRefreshCw } from "react-icons/fi";
 import { getBlob } from "@/lib/actions";
-import {
-  decryptJSON,
-  deriveVault,
-  generatePassword,
-  saveSession,
-  type Session,
-} from "@/lib/crypto";
+import { decryptJSON, deriveVault, generatePassword, saveSession, type Session } from "@/lib/crypto";
 import type { LinkItem } from "@/lib/types";
 
 export type Unlocked = {
@@ -122,19 +116,13 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
               title="Generate a strong random password"
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none disabled:opacity-60"
             >
-              {copied ? (
-                <FiCheck className="h-5 w-5 text-accent" />
-              ) : (
-                <FiRefreshCw className="h-5 w-5" />
-              )}
+              {copied ? <FiCheck className="h-5 w-5 text-accent" /> : <FiRefreshCw className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
         {password.length > 0 && (
-          <p className="absolute top-full left-0 mt-2 text-xs tabular-nums text-muted select-none">
-            {password.length}
-          </p>
+          <p className="absolute top-full left-0 mt-2 text-xs text-muted tabular-nums select-none">{password.length}</p>
         )}
       </form>
     </div>
