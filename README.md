@@ -35,6 +35,13 @@ Step by step:
 
 The point to notice: `encKey` never leaves the browser. The server and Redis only ever hold ciphertext. Even the number of links stays hidden, because the whole vault is one opaque blob.
 
+## Tech stack
+
+- Next.js 16 (App Router, React 19, React Compiler)
+- TypeScript and Tailwind CSS v4
+- Upstash Redis over REST, with per IP rate limiting
+- hash-wasm (Argon2id) and the Web Crypto API (AES-GCM, HKDF)
+
 ## The Encryption
 
 - **Key derivation:** Argon2id (64 MB of memory, 3 passes). This makes guessing a password slow and expensive, even for someone holding the ciphertext.
@@ -49,13 +56,6 @@ Blinks relies on symmetric crypto (AES and hashing). It does not use RSA or elli
 Shor's algorithm is the quantum attack that breaks RSA and elliptic curve keys. Blinks uses none of those, so it has nothing for Shor to break. The best known quantum attack on AES-256 is Grover's algorithm, and it only takes the square root of the work. AES-256 still leaves about 128 bits of strength against a quantum computer, which is far past anything that could ever be built.
 
 So Blinks is **quantum-resistant**. This is not the same as "post-quantum". Post-quantum usually means new public key schemes designed to survive quantum computers. Blinks takes a simpler road: it does not use the public key crypto that quantum computers threaten in the first place.
-
-## Tech stack
-
-- Next.js 16 (App Router, React 19, React Compiler)
-- TypeScript and Tailwind CSS v4
-- Upstash Redis over REST, with per IP rate limiting
-- hash-wasm (Argon2id) and the Web Crypto API (AES-GCM, HKDF)
 
 ## Setup
 
@@ -103,7 +103,7 @@ You can use Blinks locally without any issues, but if you want to make it availa
 ## Good to know
 
 - Your key survives a page refresh but clears the moment you close the tab. It lives in `sessionStorage`.
-- Some sites hide their preview behind bot protection (the "Just a moment" page). For those, Blinks falls back to showing the hostname.
+- Some sites, especially those using Cloudflare, uses bot protection (the “Just a moment…” page). For those sites, Blinks falls back to displaying the hostname. They should work in Local because the metadata request comes from your device, but they will fail in the production server.
 - No tracking. No analytics. No third party scripts. The content security policy blocks outside scripts by design.
 
 ## License
