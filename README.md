@@ -22,7 +22,7 @@ To help, Blinks can generate a 200 character random password in one click and co
 ## How it works
 
 <p align="center">
-  <img src="docs/architecture.svg" alt="Blinks encrypts your links in the browser and sends only an opaque blob to the server and Redis" width="920">
+  <img src="public/architecture.svg" alt="Blinks encrypts your links in the browser and sends only an opaque blob to the server and Redis" width="920">
 </p>
 
 Step by step:
