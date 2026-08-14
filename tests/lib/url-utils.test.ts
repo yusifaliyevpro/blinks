@@ -1,5 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { hostOf, prettyUrl } from "@/lib/url-utils";
+import { hostOf, isValidLink, normalizeUrl, prettyUrl } from "@/lib/url-utils";
+
+// Security guard: a saved link's `url` is rendered as an anchor `href`
+// (link-card.tsx). If a `javascript:`/`data:`/`vbscript:`/`file:` URL could
+// survive normalize + validate, clicking a card would run script or reach a
+// local resource. These must never pass — both directly and after normalizeUrl
+// (which prepends https:// to schemeless input). Locks the XSS/href guarantee.
+describe("dangerous URL schemes never validate (href XSS guard)", () => {
+  const dangerous = [
+    "javascript:alert(1)",
+    "JavaScript:alert(1)",
+    "  javascript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "vbscript:msgbox(1)",
+    "file:///etc/passwd",
+    "blob:https://example.com/uuid",
+  ];
+
+  for (const input of dangerous) {
+    it(`rejects ${JSON.stringify(input)} directly and after normalizeUrl`, () => {
+      expect(isValidLink(input)).toBe(false);
+      expect(isValidLink(normalizeUrl(input))).toBe(false);
+    });
+  }
+
+  it("still accepts ordinary http(s) links", () => {
+    expect(isValidLink("https://example.com")).toBe(true);
+    expect(isValidLink(normalizeUrl("example.com/path"))).toBe(true);
+  });
+});
 
 describe("hostOf", () => {
   it("returns the bare hostname", () => {
