@@ -46,9 +46,7 @@ The point to notice: `encKey` never leaves the browser. The server and Redis onl
 
 Blinks relies on symmetric crypto (AES and hashing). It does not use RSA or elliptic curve keys for the vault. That is exactly what matters for the quantum question.
 
-Shor's algorithm is the quantum attack that breaks RSA and elliptic curve keys. Blinks uses none of those, so it has nothing for Shor to break.
-
-The best known quantum attack on AES-256 is Grover's algorithm, and it only takes the square root of the work. AES-256 still leaves about 128 bits of strength against a quantum computer, which is far past anything that could ever be built.
+Shor's algorithm is the quantum attack that breaks RSA and elliptic curve keys. Blinks uses none of those, so it has nothing for Shor to break. The best known quantum attack on AES-256 is Grover's algorithm, and it only takes the square root of the work. AES-256 still leaves about 128 bits of strength against a quantum computer, which is far past anything that could ever be built.
 
 So Blinks is **quantum-resistant**. This is not the same as "post-quantum". Post-quantum usually means new public key schemes designed to survive quantum computers. Blinks takes a simpler road: it does not use the public key crypto that quantum computers threaten in the first place.
 
@@ -95,16 +93,15 @@ You need Node 20 or newer and pnpm.
 
 ## Deploy
 
-Blinks is a normal Next.js app, so you can deploy it anywhere that runs Next.js.
+You can use Blinks locally without any issues, but if you want to make it available as a normal website, you can deploy them anywhere that runs Next.js.
 
 1. Push the repo to your Git host.
 2. Point your host at the repo and build it.
-3. Add the same environment variables from `.env.example`.
+3. Add the same environment variables from `.env`.
 4. Make sure `NEXT_PUBLIC_KDF_SALT` matches the value you used locally, or your existing links will not open.
 
 ## Good to know
 
-- Dark mode only, on purpose.
 - Your key survives a page refresh but clears the moment you close the tab. It lives in `sessionStorage`.
 - Some sites hide their preview behind bot protection (the "Just a moment" page). For those, Blinks falls back to showing the hostname.
 - No tracking. No analytics. No third party scripts. The content security policy blocks outside scripts by design.
