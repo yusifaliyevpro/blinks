@@ -18,3 +18,9 @@ export type LinkItem = LinkMetadata & {
   url: string;
   createdAt: number;
 };
+
+// The full decrypted vault payload (encrypted as a single blob).
+export type VaultData = {
+  title: string;
+  links: LinkItem[];
+};

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getBlob } from "@/lib/actions";
-import { clearSession, decryptJSON, loadSession } from "@/lib/crypto";
+import { clearSession, decryptVault, loadSession } from "@/lib/crypto";
 import type { LinkItem } from "@/lib/types";
 import { LinksView } from "./links-view";
 import { PasswordScreen, type Unlocked } from "./password-screen";
@@ -23,16 +23,19 @@ export function VaultApp() {
       }
       try {
         const blob = await getBlob(session.blobId);
+        let title = "";
         let links: LinkItem[] = [];
         let version = 0;
 
         if (blob) {
-          links = await decryptJSON<LinkItem[]>(session.key, blob.ciphertext);
+          const data = await decryptVault(session.key, blob.ciphertext);
+          title = data.title;
+          links = data.links;
           version = blob.version;
         }
 
         if (!cancelled) {
-          setPhase({ kind: "unlocked", session, links, version });
+          setPhase({ kind: "unlocked", session, title, links, version });
         }
       } catch {
         // Stored key no longer decrypts the blob — start over.
@@ -57,6 +60,7 @@ export function VaultApp() {
   return (
     <LinksView
       session={phase.session}
+      initialTitle={phase.title}
       initialLinks={phase.links}
       initialVersion={phase.version}
       onLogout={() => {

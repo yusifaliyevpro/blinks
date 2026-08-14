@@ -10,6 +10,7 @@
 
 import { argon2id } from "hash-wasm";
 import { clientEnv } from "./env.client";
+import type { VaultData } from "./types";
 
 const te = new TextEncoder();
 const td = new TextDecoder();
@@ -120,9 +121,21 @@ export async function deriveVault(password: string): Promise<Vault> {
   return { blobId: toHex(blobIdBytes), key, encKeyBytes };
 }
 
+// gzip the payload before encrypting (URLs/text compress well), keeping the
+// single-blob model — the ciphertext just gets smaller.
+async function compress(bytes: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([ab(bytes)]).stream().pipeThrough(new CompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function decompress(bytes: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([ab(bytes)]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
 export async function encryptJSON(key: CryptoKey, value: unknown): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
-  const data = te.encode(JSON.stringify(value));
+  const data = await compress(te.encode(JSON.stringify(value)));
   const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, ab(data)));
   const packed = new Uint8Array(iv.length + ct.length);
   packed.set(iv, 0);
@@ -130,14 +143,19 @@ export async function encryptJSON(key: CryptoKey, value: unknown): Promise<strin
   return toBase64(packed);
 }
 
+export async function decryptVault(key: CryptoKey, ciphertext: string): Promise<VaultData> {
+  return decryptJSON<VaultData>(key, ciphertext);
+}
+
 export async function decryptJSON<T>(key: CryptoKey, ciphertext: string): Promise<T> {
   const packed = fromBase64(ciphertext);
   const iv = packed.subarray(0, IV_BYTES);
   const ct = packed.subarray(IV_BYTES);
-  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: ab(iv) }, key, ab(ct));
+  const plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: ab(iv) }, key, ab(ct)));
+  const json = td.decode(await decompress(plain));
   // Trust boundary: the caller declares the shape it stored under this key.
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  return JSON.parse(td.decode(plain)) as T;
+  return JSON.parse(json) as T;
 }
 
 // --- Session persistence (sessionStorage: survives refresh, clears on close) ---

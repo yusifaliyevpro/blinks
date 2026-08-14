@@ -3,13 +3,14 @@
 import { useRef, useState } from "react";
 import { FiCheck, FiEye, FiEyeOff, FiRefreshCw } from "react-icons/fi";
 import { getBlob } from "@/lib/actions";
-import { decryptJSON, deriveVault, generatePassword, saveSession, type Session } from "@/lib/crypto";
+import { decryptVault, deriveVault, generatePassword, saveSession, type Session } from "@/lib/crypto";
 import { allowPasswordManagers } from "@/lib/env.client";
 import type { LinkItem } from "@/lib/types";
 import { Logo } from "./logo";
 
 export type Unlocked = {
   session: Session;
+  title: string;
   links: LinkItem[];
   version: number;
 };
@@ -32,17 +33,21 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
       const vault = await deriveVault(password);
       const blob = await getBlob(vault.blobId);
 
+      let title = "";
       let links: LinkItem[] = [];
       let version = 0;
       if (blob) {
         // Throws on a wrong password (AES-GCM auth failure).
-        links = await decryptJSON<LinkItem[]>(vault.key, blob.ciphertext);
+        const data = await decryptVault(vault.key, blob.ciphertext);
+        title = data.title;
+        links = data.links;
         version = blob.version;
       }
 
       saveSession(vault.blobId, vault.encKeyBytes);
       onUnlock({
         session: { blobId: vault.blobId, key: vault.key },
+        title,
         links,
         version,
       });

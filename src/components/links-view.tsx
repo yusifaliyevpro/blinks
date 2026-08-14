@@ -5,9 +5,10 @@ import { startTransition, useEffect, useOptimistic, useRef, useState } from "rea
 import { FiLogOut } from "react-icons/fi";
 import * as z from "zod/mini";
 import { fetchMetadata, putBlob } from "@/lib/actions";
-import { decryptJSON, encryptJSON, type Session } from "@/lib/crypto";
-import type { LinkItem } from "@/lib/types";
+import { decryptVault, encryptJSON, type Session } from "@/lib/crypto";
+import type { LinkItem, VaultData } from "@/lib/types";
 import { LinkCard, type DisplayLink } from "./link-card";
+import { VaultTitle } from "./vault-title";
 
 const urlSchema = z.url();
 
@@ -49,11 +50,13 @@ function canonicalKey(url: string): string {
 
 export function LinksView({
   session,
+  initialTitle,
   initialLinks,
   initialVersion,
   onLogout,
 }: {
   session: Session;
+  initialTitle: string;
   initialLinks: LinkItem[];
   initialVersion: number;
   onLogout: () => void;
@@ -68,6 +71,7 @@ export function LinksView({
 
   const linksRef = useRef(links);
   const versionRef = useRef(initialVersion);
+  const titleRef = useRef(initialTitle); // last persisted title (base for commits)
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Keep the latest-links ref in sync outside render (event handlers and the
@@ -93,11 +97,12 @@ export function LinksView({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Encrypt the whole array and write it under optimistic concurrency control.
-  // On a version conflict, re-fetch the latest, re-apply the same logical
-  // mutation onto it, and retry — so a second open tab can never clobber data.
-  async function commit(mutate: (current: LinkItem[]) => LinkItem[]): Promise<void> {
-    let base = linksRef.current;
+  // Encrypt the whole vault ({ title, links }) and write it under optimistic
+  // concurrency control. On a version conflict, re-fetch the latest, re-apply
+  // the same logical mutation onto it, and retry — so a second open tab can
+  // never clobber data.
+  async function commit(mutate: (current: VaultData) => VaultData): Promise<void> {
+    let base: VaultData = { title: titleRef.current, links: linksRef.current };
     let expected = versionRef.current;
 
     for (let attempt = 0; attempt < 6; attempt++) {
@@ -111,20 +116,30 @@ export function LinksView({
 
       if ("version" in res) {
         versionRef.current = res.version;
-        linksRef.current = next;
-        setLinks(next);
+        linksRef.current = next.links;
+        titleRef.current = next.title;
+        setLinks(next.links);
         return;
       }
 
       if (res.current) {
-        base = await decryptJSON<LinkItem[]>(session.key, res.current.ciphertext);
+        base = await decryptVault(session.key, res.current.ciphertext);
         expected = res.current.version;
       } else {
-        base = [];
+        base = { title: "", links: [] };
         expected = 0;
       }
     }
     throw new Error("Could not save after several attempts — please retry.");
+  }
+
+  async function saveTitle(value: string) {
+    try {
+      await commit((d) => ({ ...d, title: value }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save.");
+      throw err;
+    }
   }
 
   function handleAdd(event: React.FormEvent) {
@@ -176,7 +191,7 @@ export function LinksView({
       };
 
       try {
-        await commit((current) => [item, ...current]);
+        await commit((d) => ({ ...d, links: [item, ...d.links] }));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to save.");
       }
@@ -188,7 +203,7 @@ export function LinksView({
     startTransition(async () => {
       applyOptimistic({ type: "remove", id });
       try {
-        await commit((current) => current.filter((l) => l.id !== id));
+        await commit((d) => ({ ...d, links: d.links.filter((l) => l.id !== id) }));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to delete.");
       }
@@ -196,7 +211,7 @@ export function LinksView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:py-16">
+    <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-16 sm:pt-10 sm:pb-20">
       <button
         type="button"
         onClick={onLogout}
@@ -207,6 +222,10 @@ export function LinksView({
         <FiLogOut className="h-4 w-4" />
         Log out
       </button>
+
+      <div className="mb-5">
+        <VaultTitle initialTitle={initialTitle} onSave={saveTitle} />
+      </div>
 
       <form onSubmit={handleAdd}>
         <input
