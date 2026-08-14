@@ -18,7 +18,10 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Blinks",
+  title: {
+    default: "Blinks",
+    template: "%s | Blinks",
+  },
   robots: {
     index: false,
     follow: false,

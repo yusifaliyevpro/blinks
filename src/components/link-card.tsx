@@ -5,37 +5,17 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { FiCheck, FiLoader, FiTrash2 } from "react-icons/fi";
 import type { LinkItem } from "@/lib/types";
+import { hostOf, prettyUrl } from "@/lib/url-utils";
 
 export type DisplayLink = LinkItem & { pending?: boolean };
 
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
-
-// Host + path, without protocol or trailing slash, for a compact URL line.
-function prettyUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    const path = u.pathname === "/" ? "" : u.pathname.replace(/\/$/, "");
-    return u.hostname.replace(/^www\./, "") + path + u.search;
-  } catch {
-    return url;
-  }
-}
-
-export function LinkCard({
-  link,
-  onDelete,
-  pulse = 0,
-}: {
+type LinkCardProps = {
   link: DisplayLink;
   onDelete: (id: string) => void;
   pulse?: number;
-}) {
+};
+
+export function LinkCard({ link, onDelete, pulse = 0 }: LinkCardProps) {
   const [imageOk, setImageOk] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
