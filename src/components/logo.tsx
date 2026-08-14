@@ -28,13 +28,7 @@ export function Logo({ open = true, className }: { open?: boolean; className?: s
   }, []);
 
   return (
-    <svg
-      ref={svgRef}
-      viewBox="0 0 48 32"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-    >
+    <svg ref={svgRef} viewBox="0 0 48 32" fill="none" className={className} aria-hidden="true">
       <g style={{ opacity: open ? 1 : 0, transition: "opacity 0.2s ease" }}>
         <path
           d="M3 16C11 2 37 2 45 16C37 30 11 30 3 16Z"

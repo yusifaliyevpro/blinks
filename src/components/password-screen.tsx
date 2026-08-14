@@ -86,9 +86,7 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
       <form onSubmit={submit} className="relative w-full max-w-sm">
         <div className="absolute inset-x-0 bottom-full mb-6 flex items-center justify-center gap-4">
           <Logo open={!show} className="h-14 w-auto text-text" />
-          <h1 className="font-display text-6xl leading-none tracking-tight text-text select-none">
-            Blinks
-          </h1>
+          <h1 className="font-display text-6xl leading-none tracking-tight text-text select-none">Blinks</h1>
         </div>
 
         <div className="relative">
