@@ -32,7 +32,6 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
   const [input, setInput] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Which card to pulse, and a nonce so re-pasting the same link re-triggers it.
   const [pulse, setPulse] = useState<{ id: string; n: number } | null>(null);
 
   const linksRef = useRef(links);

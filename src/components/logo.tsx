@@ -2,8 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-// Blinks eye. Open: the pupil tracks the cursor (via direct DOM writes, no
-// re-render). Closed: it blinks shut. Eye inherits currentColor; pupil is accent.
 export function Logo({ open = true, className }: { open?: boolean; className?: string }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const pupilRef = useRef<SVGGElement>(null);
