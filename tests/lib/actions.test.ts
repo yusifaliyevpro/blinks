@@ -79,7 +79,7 @@ describe("putBlob", () => {
     evalScript.mockResolvedValue(["ok", 4]);
     expect(await putBlob(input)).toEqual({ version: 4 });
     // The write token is passed to the Lua script as the third arg (proof of possession).
-    expect(evalScript).toHaveBeenCalledWith(expect.any(String), [VALID_ID], [CIPHERTEXT, 3, TOKEN]);
+    expect(evalScript).toHaveBeenCalledWith(expect.any(String), [`blinks:blob:${VALID_ID}`], [CIPHERTEXT, 3, TOKEN]);
   });
 
   it("maps a conflict with current data to a conflict result", async () => {

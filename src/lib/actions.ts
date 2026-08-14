@@ -18,6 +18,11 @@ import type { GetBlobResult, LinkMetadata, PutBlobResult } from "./types";
 // first in this list (or the limits are cosmetic).
 const IP_HEADERS = ["x-vercel-forwarded-for", "x-forwarded-for", "x-real-ip"] as const;
 
+// Namespace the blob under `blinks:*` (like the rate-limit keys) so the vault can
+// share a Redis DB with another project without colliding. Storage-only: the raw
+// blobId still comes from the client's HKDF output; this only prefixes the key.
+const blobKey = (id: string): string => `blinks:blob:${id}`;
+
 async function clientIp(): Promise<string> {
   const h = await headers();
   for (const name of IP_HEADERS) {
@@ -36,7 +41,7 @@ export async function getBlob(blobId: string): Promise<GetBlobResult> {
   const id = blobIdSchema.parse(blobId);
   await rateLimit(blobLimiter);
 
-  const data = await redis.hgetall<{ c: string; v: number | string }>(id);
+  const data = await redis.hgetall<{ c: string; v: number | string }>(blobKey(id));
   if (!data?.c) return null;
   return { ciphertext: data.c, version: Number(data.v) };
 }
@@ -50,7 +55,7 @@ export async function putBlob(input: {
   const { blobId, ciphertext, expectedVersion, writeToken } = putBlobSchema.parse(input);
   await rateLimit(blobLimiter);
 
-  const result = await redis.eval(PUT_BLOB_CAS, [blobId], [ciphertext, expectedVersion, writeToken]);
+  const result = await redis.eval(PUT_BLOB_CAS, [blobKey(blobId)], [ciphertext, expectedVersion, writeToken]);
   // Shape is fixed by PUT_BLOB_CAS (see scripts.ts).
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const cas = result as CasResult;
