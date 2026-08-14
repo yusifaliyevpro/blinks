@@ -59,8 +59,7 @@
 
 html {
   color-scheme: dark;
-  /* Reserve the scrollbar track always, so content never shifts when it
-     appears/disappears between pages. */
+  /* Always reserve the track so content never shifts between pages. */
   scrollbar-gutter: stable;
 }
 
@@ -69,8 +68,7 @@ body {
   color: var(--color-text);
 }
 
-/* WebKit / Chromium: a slim, muted pill that matches the dark UI. Scoping to
-   `html` gives a custom scrollbar with no arrow buttons at the ends. */
+/* WebKit/Chromium: slim muted pill scrollbar, no arrow buttons. */
 html::-webkit-scrollbar {
   width: 10px;
 }

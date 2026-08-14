@@ -2,27 +2,14 @@
 
 import { AnimatePresence } from "motion/react";
 import { startTransition, useEffect, useOptimistic, useRef, useState } from "react";
-import { FiLogOut } from "react-icons/fi";
-import * as z from "zod/mini";
+import { FiCornerDownLeft, FiLogOut } from "react-icons/fi";
 import { fetchMetadata, putBlob } from "@/lib/actions";
 import { decryptVault, encryptJSON, type Session } from "@/lib/crypto";
 import type { LinkItem, VaultData } from "@/lib/types";
+import { canonicalKey, isValidLink, normalizeUrl } from "@/lib/url-utils";
 import { LinkCard, type DisplayLink } from "./link-card";
+import { VaultIO } from "./vault-io";
 import { VaultTitle } from "./vault-title";
-
-const urlSchema = z.url();
-
-// Accept a real link only: valid URL syntax and a dotted hostname (has a TLD),
-// so bare words like "hello" — which normalize into a technically-valid
-// https://hello — are rejected.
-function isValidLink(url: string): boolean {
-  if (!urlSchema.safeParse(url).success) return false;
-  try {
-    return new URL(url).hostname.includes(".");
-  } catch {
-    return false;
-  }
-}
 
 type OptimisticAction = { type: "add"; item: DisplayLink } | { type: "remove"; id: string };
 
@@ -31,36 +18,15 @@ function reducer(state: DisplayLink[], action: OptimisticAction): DisplayLink[] 
   return state.filter((l) => l.id !== action.id);
 }
 
-function normalizeUrl(input: string): string {
-  const trimmed = input.trim();
-  if (!trimmed) return trimmed;
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-}
-
-// Canonical form for matching an already-saved link: lowercased host, trailing
-// slash dropped, so minor cosmetic differences still count as the same link.
-function canonicalKey(url: string): string {
-  try {
-    const u = new URL(url);
-    return `${u.protocol}//${u.host.toLowerCase()}${u.pathname.replace(/\/$/, "")}${u.search}`;
-  } catch {
-    return url.trim().toLowerCase();
-  }
-}
-
-export function LinksView({
-  session,
-  initialTitle,
-  initialLinks,
-  initialVersion,
-  onLogout,
-}: {
+type LinksViewProps = {
   session: Session;
   initialTitle: string;
   initialLinks: LinkItem[];
   initialVersion: number;
   onLogout: () => void;
-}) {
+};
+
+export function LinksView({ session, initialTitle, initialLinks, initialVersion, onLogout }: LinksViewProps) {
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [optimistic, applyOptimistic] = useOptimistic<DisplayLink[], OptimisticAction>(links, reducer);
   const [input, setInput] = useState("");
@@ -74,14 +40,12 @@ export function LinksView({
   const titleRef = useRef(initialTitle); // last persisted title (base for commits)
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Keep the latest-links ref in sync outside render (event handlers and the
-  // commit loop read linksRef.current to avoid stale closures).
+  // Mirror latest links into a ref so handlers/commit avoid stale closures.
   useEffect(() => {
     linksRef.current = links;
   }, [links]);
 
-  // Pressing Enter while nothing (or a non-interactive element) is focused jumps
-  // back to the link input — so you can keep adding without reaching for it.
+  // Enter with nothing interactive focused jumps back to the link input.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "Enter") return;
@@ -97,10 +61,9 @@ export function LinksView({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Encrypt the whole vault ({ title, links }) and write it under optimistic
-  // concurrency control. On a version conflict, re-fetch the latest, re-apply
-  // the same logical mutation onto it, and retry — so a second open tab can
-  // never clobber data.
+  // Encrypt and write the whole vault under optimistic concurrency. On a version
+  // conflict, re-fetch, re-apply the same mutation, and retry so a second tab
+  // can't clobber data.
   async function commit(mutate: (current: VaultData) => VaultData): Promise<void> {
     let base: VaultData = { title: titleRef.current, links: linksRef.current };
     let expected = versionRef.current;
@@ -198,6 +161,23 @@ export function LinksView({
     });
   }
 
+  // Add the validated, de-duped links from VaultIO. Optimistically shown in
+  // reverse to match the prepended commit order; placeholders get a distinct
+  // `pending-` id so they can't collide with the committed items mid-transition.
+  function handleImport(newLinks: LinkItem[]) {
+    setError(null);
+    startTransition(async () => {
+      for (let i = newLinks.length - 1; i >= 0; i--) {
+        applyOptimistic({ type: "add", item: { ...newLinks[i], id: `pending-${newLinks[i].id}` } });
+      }
+      try {
+        await commit((d) => ({ ...d, links: [...newLinks, ...d.links] }));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to import.");
+      }
+    });
+  }
+
   function handleDelete(id: string) {
     setError(null);
     startTransition(async () => {
@@ -212,6 +192,13 @@ export function LinksView({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-16 sm:pt-3 sm:pb-20">
+      <VaultIO
+        getLinks={() => linksRef.current}
+        getTitle={() => titleRef.current}
+        onImport={handleImport}
+        onError={setError}
+      />
+
       <button
         type="button"
         onClick={onLogout}
@@ -227,14 +214,14 @@ export function LinksView({
         <VaultTitle initialTitle={initialTitle} onSave={saveTitle} />
       </div>
 
-      <form onSubmit={handleAdd}>
+      <form onSubmit={handleAdd} className="relative">
         <input
           ref={inputRef}
           type="text"
           inputMode="url"
           autoComplete="off"
           spellCheck={false}
-          placeholder="Paste a link, press Enter"
+          placeholder="Paste a link"
           value={input}
           onChange={(e) => {
             setInput(e.target.value);
@@ -242,10 +229,21 @@ export function LinksView({
           }}
           onAnimationEnd={() => setInvalid(false)}
           aria-invalid={invalid}
-          className={`w-full rounded-xl border bg-panel px-4 py-3 text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 ${
+          className={`w-full rounded-xl border bg-panel py-3 pr-14 pl-4 text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 ${
             invalid ? "animate-shake border-red-500/70" : "border-border"
           }`}
         />
+        <button
+          type="submit"
+          // Trailing icon button — preventDefault on mousedown so clicking it
+          // never steals focus from the input.
+          onMouseDown={(e) => e.preventDefault()}
+          aria-label="Add link"
+          title="Add link"
+          className="absolute top-1/2 right-2 flex h-8 w-9 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-panel text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none"
+        >
+          <FiCornerDownLeft className="h-4 w-4" />
+        </button>
       </form>
 
       {error && (

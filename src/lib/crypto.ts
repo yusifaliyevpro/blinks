@@ -1,12 +1,10 @@
-// Client-side, zero-knowledge crypto. Nothing here ever runs on the server.
+// Client-side, zero-knowledge crypto — never runs on the server.
 //
-// Flow:
 //   password ──Argon2id──▶ master ──HKDF(info=enc)──▶ AES-GCM key (encKey)
 //                                └──HKDF(info=id)───▶ blobId (Redis key)
 //
-// Two independent outputs are derived from one expensive Argon2id pass using
-// HKDF-SHA256 with distinct `info` labels (domain separation). A wrong
-// password produces a wrong blobId (Redis miss) or fails AES-GCM auth.
+// One Argon2id pass, two HKDF-SHA256 outputs (distinct `info` labels). A wrong
+// password yields a wrong blobId (Redis miss) or fails AES-GCM auth.
 
 import { argon2id } from "hash-wasm";
 import { clientEnv } from "./env.client";
@@ -15,8 +13,7 @@ import type { VaultData } from "./types";
 const te = new TextEncoder();
 const td = new TextDecoder();
 
-// Argon2id parameters. 64 MiB / 3 iterations / 1 lane. Tune memorySize or
-// iterations if unlock feels slow on your machine — this runs once per unlock.
+// Argon2id: 64 MiB / 3 iterations / 1 lane. Runs once per unlock.
 const KDF = {
   parallelism: 1,
   iterations: 3,
@@ -71,8 +68,7 @@ function fromBase64(b64: string): Uint8Array {
   return bytes;
 }
 
-// WebCrypto's BufferSource type wants an ArrayBuffer-backed view. Copy into a
-// fresh one so the types line up regardless of the source's backing buffer.
+// Copy into a fresh ArrayBuffer-backed view so WebCrypto's BufferSource type fits.
 function ab(view: Uint8Array): Uint8Array<ArrayBuffer> {
   const copy = new Uint8Array(view.byteLength);
   copy.set(view);
@@ -92,9 +88,8 @@ async function hkdf(master: CryptoKey, salt: Uint8Array, info: Uint8Array, bits:
   return new Uint8Array(derived);
 }
 
-// Imported non-extractable: the working key can never be read back out of the
-// WebCrypto layer. Session persistence stores the raw derived bytes we already
-// hold, not an export of this key.
+// Non-extractable: the key can't be read back out. Session persistence stores
+// the raw derived bytes we already hold, not an export of this key.
 async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", ab(raw), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
@@ -111,7 +106,7 @@ export async function deriveVault(password: string): Promise<Vault> {
 
   const master = await crypto.subtle.importKey("raw", ab(masterBytes), "HKDF", false, ["deriveBits"]);
 
-  // Independent derivations from the same key — race them instead of waterfalling.
+  // Independent derivations from the same key — race, don't waterfall.
   const [encKeyBytes, blobIdBytes] = await Promise.all([
     hkdf(master, argonSalt, ENC_INFO, 256),
     hkdf(master, argonSalt, ID_INFO, 256),
@@ -121,8 +116,7 @@ export async function deriveVault(password: string): Promise<Vault> {
   return { blobId: toHex(blobIdBytes), key, encKeyBytes };
 }
 
-// gzip the payload before encrypting (URLs/text compress well), keeping the
-// single-blob model — the ciphertext just gets smaller.
+// gzip before encrypting (URLs/text compress well) — same single-blob model.
 async function compress(bytes: Uint8Array): Promise<Uint8Array> {
   const stream = new Blob([ab(bytes)]).stream().pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
@@ -153,7 +147,7 @@ export async function decryptJSON<T>(key: CryptoKey, ciphertext: string): Promis
   const ct = packed.subarray(IV_BYTES);
   const plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: ab(iv) }, key, ab(ct)));
   const json = td.decode(await decompress(plain));
-  // Trust boundary: the caller declares the shape it stored under this key.
+  // Caller declares the shape it stored under this key.
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return JSON.parse(json) as T;
 }
@@ -187,8 +181,7 @@ export function clearSession(): void {
 
 const PASSWORD_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}|;:,.<>?/~";
 
-// CSPRNG-backed, uniform over the charset (rejection sampling removes modulo
-// bias). 200 chars over this ~90-symbol set ≈ 1290 bits of entropy.
+// CSPRNG-backed, uniform over the charset via rejection sampling (no modulo bias).
 export function generatePassword(length = 200): string {
   const chars = PASSWORD_CHARSET;
   const n = chars.length;

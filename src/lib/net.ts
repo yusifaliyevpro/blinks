@@ -1,9 +1,6 @@
-// SSRF guard for server-side link-metadata fetching.
-//
-// `resolvePublicHost` is passed to link-preview-js as its `resolveDNSHost`
-// callback: it resolves the host and throws if any resolved address is a
-// private / loopback / link-local / reserved range, blocking the request
-// before it's made. URLs are never logged here.
+// SSRF guard for server-side metadata fetching. `resolvePublicHost` is
+// link-preview-js's `resolveDNSHost` callback: it throws if the host resolves to
+// a private/loopback/link-local/reserved range, blocking the request. No logging.
 
 import { lookup } from "node:dns/promises";
 

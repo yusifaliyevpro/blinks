@@ -95,7 +95,7 @@ describe("VaultTitle", () => {
     await act(async () => {
       fireEvent.keyDown(input, { key: "Enter" });
     });
-    expect(onSave).toHaveBeenCalledExactlyOnceWith("x".repeat(80));
+    expect(onSave).toHaveBeenCalledExactlyOnceWith("x".repeat(30));
   });
 
   it("keeps the draft (does not mark saved) when onSave rejects", async () => {

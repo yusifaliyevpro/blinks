@@ -11,9 +11,8 @@ type VaultTitleProps = {
   onSave: (title: string) => Promise<void>;
 };
 
-// Inline, borderless editable title. Autosaves 3s after typing stops (or on
-// Enter) via the parent's `onSave`, and flashes a subtle check on success.
-// Also mirrors the title into the document/tab title.
+// Inline editable title. Autosaves 3s after typing stops (or on Enter), flashes
+// a check on success, and mirrors into the document title.
 export function VaultTitle({ initialTitle, onSave }: VaultTitleProps) {
   const [title, setTitle] = useState(initialTitle);
   const [saved, setSaved] = useState(false);

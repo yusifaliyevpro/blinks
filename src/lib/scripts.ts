@@ -1,13 +1,8 @@
-// Atomic compare-and-set for the encrypted blob.
+// Atomic compare-and-set for the encrypted blob. Upstash REST is stateless (no
+// WATCH/MULTI), so this script is the atomic unit: write only if the stored
+// version still matches `expected`, so two tabs can't clobber each other.
 //
-// Upstash's REST API is stateless, so there's no WATCH/MULTI session to hold a
-// read and a write together. This tiny server-side script is the atomic unit
-// instead: it reads the stored version and only writes (bumping the version) if
-// it still matches `expected`. Two tabs can therefore never clobber each other.
-//
-// The blob is a Redis hash with two fields: `c` (ciphertext), `v` (version).
-//
-// Return value (a plain array, no JSON string building):
+// Blob = Redis hash with fields `c` (ciphertext), `v` (version). Returns:
 //   success  -> ["ok", newVersion]
 //   conflict -> ["conflict", currentVersion, currentCiphertext | null]
 export const PUT_BLOB_CAS = `

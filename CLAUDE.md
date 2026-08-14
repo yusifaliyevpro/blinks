@@ -17,6 +17,9 @@ client. Dark-mode only, deployed on Vercel.
   catches React Compiler bailouts.
 - Package manager is **pnpm**. Don't add dependencies casually — the workspace
   enforces a supply-chain policy (`minimumReleaseAge`, `trustPolicy`).
+- **Keep comments to a minimum.** Don't restate what the code plainly says. Only
+  write a comment when the reasoning is genuinely non-obvious (a security
+  trade-off, a subtle race, a workaround) — and keep it short, ideally one line.
 
 ### Testing workflow (follow this exactly)
 

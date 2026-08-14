@@ -25,10 +25,8 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showImage = Boolean(link.image) && imageOk;
 
-  // Re-runs whenever the pulse nonce changes (i.e. the same link was pasted
-  // again): flash the card and bring it into view to say "I'm already here".
-  // Driven imperatively via the DOM (no React state) so it can't cascade a
-  // render — the class is removed once the CSS animation ends.
+  // On each pulse nonce change (same link pasted again): flash the card and
+  // scroll it into view. Driven via the DOM so it can't cascade a render.
   useEffect(() => {
     if (!pulse) return undefined;
     const card = cardRef.current;
@@ -50,8 +48,7 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
     };
   }, []);
 
-  // Two-step delete: first click arms it (shows a confirm icon), a second click
-  // within 3s actually deletes — otherwise it disarms itself.
+  // Two-step delete: first click arms, a second within 3s deletes; else disarms.
   function handleDeleteClick() {
     if (confirming) {
       clearTimeout(confirmTimer.current ?? undefined);
@@ -85,7 +82,7 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
             {link.pending && !link.title ? (
               <div className="flex items-center gap-2 text-muted">
                 <FiLoader className="h-4 w-4 animate-spin" />
-                <span className="text-sm">{hostOf(link.url)}</span>
+                <span className="text-sm select-none">{hostOf(link.url)}</span>
               </div>
             ) : (
               <>
@@ -112,8 +109,7 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
 
         <button
           type="button"
-          // Never keyboard-reachable: no tab stop, and no focus on click — so an
-          // accidental double keypress can't ever delete a link.
+          // Never keyboard-reachable, so a stray double keypress can't delete.
           tabIndex={-1}
           onMouseDown={(e) => e.preventDefault()}
           onClick={handleDeleteClick}

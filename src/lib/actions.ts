@@ -62,9 +62,8 @@ function fallbackTitle(url: string): string {
   }
 }
 
-// Sites behind bot protection (Cloudflare, DDoS-Guard, …) serve an interstitial
-// challenge page to datacenter IPs instead of the real content. Its title is
-// junk like "Just a moment…" — detect it so we don't store it as the link title.
+// Bot-protection interstitials (Cloudflare, DDoS-Guard, …) serve junk titles
+// like "Just a moment…" to datacenter IPs — detect so we don't store them.
 const CHALLENGE_TITLE =
   /^(just a moment|attention required|access denied|checking your browser|verifying you are human|please wait|security check|are you a robot|ddos-guard|один момент)/i;
 
@@ -77,9 +76,7 @@ export async function fetchMetadata(url: string): Promise<LinkMetadata> {
   await rateLimit(metadataLimiter);
 
   try {
-    // link-preview-js fetches + parses OG/Twitter/HTML metadata. `resolveDNSHost`
-    // is our SSRF gate: it rejects hosts that resolve to private/loopback ranges
-    // before any request is made. 5s timeout, follows redirects.
+    // resolveDNSHost is the SSRF gate — rejects private/loopback hosts before fetch.
     const preview = await getLinkPreview(clean, {
       timeout: 5_000,
       followRedirects: "follow",
@@ -89,8 +86,7 @@ export async function fetchMetadata(url: string): Promise<LinkMetadata> {
 
     const rawTitle = "title" in preview ? (preview.title ?? "") : "";
     if (looksLikeBotChallenge(rawTitle)) {
-      // Bot-protection interstitial — there's no real metadata to read from a
-      // datacenter IP. Fall back to the hostname instead of the junk title.
+      // No real metadata behind the challenge — fall back to the hostname.
       return { title: fallbackTitle(clean), description: "", image: "" };
     }
 
