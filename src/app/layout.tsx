@@ -22,6 +22,8 @@ export const metadata: Metadata = {
     default: "Blinks",
     template: "%s | Blinks",
   },
+  description:
+    "Zero-knowledge encrypted link manager: one password, everything encrypted in your browser, and the server only ever stores an opaque blob.",
   robots: {
     index: false,
     follow: false,
