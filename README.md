@@ -5,7 +5,7 @@
 
 Blinks is a private place to save links. Everything is encrypted inside your browser. You unlock it with one password. The server never sees your password or your links. It only ever holds a blob of bytes it cannot read.
 
-Live demo: [add your demo link here]. It is there just for fun, so try it if you want.
+See the [live demo](https://blinks-demo1.vercel.app/). It is for testing only; use your deployment or local setup for actual use.
 
 ## One password is the whole account
 
