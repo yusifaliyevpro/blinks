@@ -1,5 +1,5 @@
 <h1>
-  <img src="public/icon.svg" alt="" height="34" align="center" />
+  <img src="public/icon.svg" alt="" height="56" align="center" />
   Blinks
 </h1>
 
