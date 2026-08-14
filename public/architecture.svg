@@ -1,0 +1,108 @@
+<svg width="960" height="620" viewBox="0 0 960 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blinks encrypts your links in the browser and sends only an opaque blob to the server and Redis">
+  <style>
+    text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .h { fill: #ececf0; font-size: 14px; font-weight: 600; }
+    .t { fill: #ececf0; font-size: 13px; }
+    .m { fill: #8b8b96; font-size: 11.5px; }
+    .code { fill: #c7c7f2; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+    .box { fill: #17171b; stroke: #2b2b31; }
+    .acc { fill: #16162a; stroke: #6366f1; }
+    .flow { stroke: #6f6f7c; stroke-width: 1.5; fill: none; }
+  </style>
+
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#6f6f7c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect x="8" y="8" width="944" height="604" rx="18" fill="#0a0a0c" stroke="#26262d"/>
+
+  <!-- panels -->
+  <rect fill="#0f0f13" stroke="#26262d" x="28" y="60" width="384" height="500" rx="14"/>
+  <rect fill="#0f0f13" stroke="#26262d" x="492" y="60" width="180" height="500" rx="14"/>
+  <rect fill="#0f0f13" stroke="#26262d" x="752" y="60" width="180" height="500" rx="14"/>
+
+  <circle cx="48" cy="90" r="4" fill="#6366f1"/>
+  <text class="h" x="62" y="94">Your browser</text>
+  <circle cx="512" cy="90" r="4" fill="#6f6f7c"/>
+  <text class="h" x="526" y="94">Server action</text>
+  <circle cx="772" cy="90" r="4" fill="#6f6f7c"/>
+  <text class="h" x="786" y="94">Redis</text>
+
+  <!-- client: derive keys -->
+  <rect class="box" x="60" y="116" width="320" height="42" rx="9"/>
+  <text class="t" x="220" y="142" text-anchor="middle">password  +  public salt</text>
+  <path class="flow" d="M220 158 L220 174" marker-end="url(#ah)"/>
+
+  <rect class="box" x="94" y="176" width="252" height="46" rx="9"/>
+  <text class="t" x="220" y="198" text-anchor="middle">Argon2id</text>
+  <text class="m" x="220" y="214" text-anchor="middle">memory-hard KDF</text>
+  <path class="flow" d="M220 222 L220 238" marker-end="url(#ah)"/>
+
+  <rect class="box" x="94" y="240" width="252" height="42" rx="9"/>
+  <text class="t" x="220" y="266" text-anchor="middle">master secret</text>
+  <path class="flow" d="M220 282 L220 298" marker-end="url(#ah)"/>
+
+  <rect class="box" x="94" y="300" width="252" height="42" rx="9"/>
+  <text class="t" x="220" y="326" text-anchor="middle">HKDF-SHA256</text>
+
+  <path class="flow" d="M198 342 L138 360" marker-end="url(#ah)"/>
+  <path class="flow" d="M242 342 L302 360" marker-end="url(#ah)"/>
+
+  <rect class="acc" x="44" y="362" width="168" height="56" rx="9"/>
+  <text class="t" x="128" y="388" text-anchor="middle">encKey</text>
+  <text class="m" x="128" y="405" text-anchor="middle">AES-256, never leaves</text>
+
+  <rect class="box" x="228" y="362" width="168" height="56" rx="9"/>
+  <text class="t" x="312" y="388" text-anchor="middle">blobId</text>
+  <text class="m" x="312" y="405" text-anchor="middle">your Redis address</text>
+
+  <line x1="44" y1="444" x2="396" y2="444" stroke="#26262d" stroke-dasharray="3 5"/>
+  <text class="m" x="220" y="466" text-anchor="middle">then encrypt your links</text>
+
+  <rect class="box" x="44" y="480" width="352" height="46" rx="9"/>
+  <text class="t" x="220" y="507" text-anchor="middle">gzip  →  AES-256-GCM ( encKey )</text>
+  <text class="m" x="220" y="546" text-anchor="middle">the output is the ciphertext</text>
+
+  <!-- client to server -->
+  <path class="flow" d="M412 300 L492 300" marker-end="url(#ah)"/>
+  <text class="m" x="452" y="290" text-anchor="middle">blobId</text>
+  <text class="m" x="452" y="316" text-anchor="middle">+ ciphertext</text>
+
+  <!-- server -->
+  <rect class="box" x="508" y="122" width="148" height="40" rx="9"/>
+  <text class="t" x="582" y="147" text-anchor="middle">validate (zod)</text>
+  <path class="flow" d="M582 162 L582 178" marker-end="url(#ah)"/>
+
+  <rect class="box" x="508" y="180" width="148" height="40" rx="9"/>
+  <text class="t" x="582" y="205" text-anchor="middle">rate-limit per IP</text>
+  <path class="flow" d="M582 220 L582 236" marker-end="url(#ah)"/>
+
+  <rect class="box" x="508" y="238" width="148" height="52" rx="9"/>
+  <text class="t" x="582" y="260" text-anchor="middle">compare-and-set</text>
+  <text class="m" x="582" y="277" text-anchor="middle">atomic Lua script</text>
+
+  <text class="m" x="582" y="332" text-anchor="middle">it only stores bytes</text>
+  <text class="m" x="582" y="349" text-anchor="middle">it cannot read</text>
+
+  <!-- server to redis -->
+  <path class="flow" d="M672 300 L752 300" marker-end="url(#ah)"/>
+  <text class="m" x="712" y="290" text-anchor="middle">atomic</text>
+  <text class="m" x="712" y="316" text-anchor="middle">write</text>
+
+  <!-- redis -->
+  <rect class="box" x="772" y="122" width="140" height="120" rx="9"/>
+  <text class="h" x="788" y="150">hash @ blobId</text>
+  <text class="code" x="788" y="182">c</text>
+  <text class="m" x="808" y="182">ciphertext</text>
+  <text class="code" x="788" y="212">v</text>
+  <text class="m" x="808" y="212">version</text>
+
+  <text class="m" x="842" y="300" text-anchor="middle">no password</text>
+  <text class="m" x="842" y="317" text-anchor="middle">no key, no plaintext</text>
+
+  <!-- footer callout -->
+  <rect x="28" y="576" width="904" height="36" rx="10" fill="#14142a" stroke="#6366f1" stroke-opacity="0.4"/>
+  <text class="t" x="480" y="599" text-anchor="middle">The key is made in your browser and never leaves it. The server and Redis only hold bytes they cannot read.</text>
+</svg>

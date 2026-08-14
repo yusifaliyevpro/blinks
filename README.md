@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<h1>
+  <img src="https://raw.githubusercontent.com/yusifaliyevpro/blinks/main/docs/public/icon.svg" alt="" height="34" align="center" />
+  Blinks
+</h1>
 
-## Getting Started
+Blinks is a private place to save links. Everything is encrypted inside your browser. You unlock it with one password. The server never sees your password or your links. It only ever holds a blob of bytes it cannot read.
 
-First, run the development server:
+Live demo: [add your demo link here]. It is there just for fun, so try it if you want.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## One password is the whole account
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+No sign up. No email. No username. No "forgot password" link.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Your password does two jobs at once: it is the **key** that encrypts your links, and it points to the **address** where they are stored. Type it and you open your vault. Type a different one and you get a different, empty vault. There is no "correct" password, because there is nothing on the server to check against.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+So two things follow. Lose your password and the data is gone for good, since a reset would let someone in without it. And your password is the only lock, so anyone who has it can open your vault. Treat it like the master key it is.
 
-## Learn More
+To help, Blinks can generate a 200 character random password in one click and copy it to your clipboard. That is enough entropy that no two people will ever land on the same one and brute-force can't happen because of design and rate limiting.
 
-To learn more about Next.js, take a look at the following resources:
+> Note: This is a personal project to explore zero knowledge architecture, where the server truly cannot read your data. For a real product, I would also add email and 2FA, for security and for marketing and personalization.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How it works
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+<p align="center">
+  <img src="docs/architecture.svg" alt="Blinks encrypts your links in the browser and sends only an opaque blob to the server and Redis" width="920">
+</p>
 
-## Deploy on Vercel
+Step by step:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Your password and a fixed public salt go into Argon2id, a slow and memory heavy function. It returns a master secret.
+2. HKDF splits that secret into two independent parts: `encKey` (an AES-256 key) and `blobId` (a hex address).
+3. Your whole vault, its title and every link, gets gzipped, then encrypted as one payload with AES-256-GCM using `encKey`.
+4. The browser sends only `blobId` and the ciphertext to a server action.
+5. The server validates the input, rate limits by IP, and writes the blob into Redis at `blobId`. It writes only if the version still matches, so two open tabs never overwrite each other.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The point to notice: `encKey` never leaves the browser. The server and Redis only ever hold ciphertext. Even the number of links stays hidden, because the whole vault is one opaque blob.
+
+## The Encryption
+
+- **Key derivation:** Argon2id (64 MB of memory, 3 passes). This makes guessing a password slow and expensive, even for someone holding the ciphertext.
+- **Cipher:** AES-256-GCM with a fresh random IV on every write. GCM also verifies the data was not tampered with.
+- **Key split:** HKDF-SHA256 with separate labels, so the storage address and the encryption key stay independent.
+- **No login to attack:** a wrong password lands on a different `blobId` (which is empty) or fails the GCM check. There is nothing to brute force, because there is no login step.
+
+### A note on quantum
+
+Blinks relies on symmetric crypto (AES and hashing). It does not use RSA or elliptic curve keys for the vault. That is exactly what matters for the quantum question.
+
+Shor's algorithm is the quantum attack that breaks RSA and elliptic curve keys. Blinks uses none of those, so it has nothing for Shor to break.
+
+The best known quantum attack on AES-256 is Grover's algorithm, and it only takes the square root of the work. AES-256 still leaves about 128 bits of strength against a quantum computer, which is far past anything that could ever be built.
+
+So Blinks is **quantum-resistant**. This is not the same as "post-quantum". Post-quantum usually means new public key schemes designed to survive quantum computers. Blinks takes a simpler road: it does not use the public key crypto that quantum computers threaten in the first place.
+
+## Tech stack
+
+- Next.js 16 (App Router, React 19, React Compiler)
+- TypeScript and Tailwind CSS v4
+- Upstash Redis over REST, with per IP rate limiting
+- hash-wasm (Argon2id) and the Web Crypto API (AES-GCM, HKDF)
+
+## Setup
+
+You need Node 20 or newer and pnpm.
+
+1. Clone and install.
+
+   ```bash
+   git clone https://github.com/your-name/blinks.git
+   cd blinks
+   pnpm install
+   ```
+
+2. Create a database in Upstash Redis. Make a free one at [upstash.com](https://upstash.com) and copy the REST credentials from its dashboard.
+
+3. Copy the example env file and fill it in.
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Read the comments in `.env.example`. The one value to think about is `NEXT_PUBLIC_KDF_SALT`. Pick a long random string once and never change it. If it changes, your saved links stop opening. You can generate a good one with:
+
+   ```bash
+   openssl rand -hex 32
+   ```
+
+4. Run it.
+
+   ```bash
+   pnpm dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) and type a password. That password is now your vault.
+
+## Deploy
+
+Blinks is a normal Next.js app, so you can deploy it anywhere that runs Next.js.
+
+1. Push the repo to your Git host.
+2. Point your host at the repo and build it.
+3. Add the same environment variables from `.env.example`.
+4. Make sure `NEXT_PUBLIC_KDF_SALT` matches the value you used locally, or your existing links will not open.
+
+## Good to know
+
+- Dark mode only, on purpose.
+- Your key survives a page refresh but clears the moment you close the tab. It lives in `sessionStorage`.
+- Some sites hide their preview behind bot protection (the "Just a moment" page). For those, Blinks falls back to showing the hostname.
+- No tracking. No analytics. No third party scripts. The content security policy blocks outside scripts by design.
+
+## License
+
+Blinks is licensed under the GNU AGPL 3.0. See the [LICENSE](LICENSE) file.
