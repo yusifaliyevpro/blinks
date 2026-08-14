@@ -1,5 +1,5 @@
 <h1>
-  <img src="https://raw.githubusercontent.com/yusifaliyevpro/blinks/main/public/icon.svg" alt="" height="34" align="center" />
+  <img src="public/icon.svg" alt="" height="34" align="center" />
   Blinks
 </h1>
 
