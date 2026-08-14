@@ -12,10 +12,26 @@ client. Dark-mode only, deployed on Vercel.
   (App Router, server actions, caching, config). This project runs **Next.js 16**
   with React 19 + React Compiler — patterns differ from older Next.
 - After changing code, keep it green: `pnpm tsc --noEmit --incremental false`,
-  `pnpm lint` (oxlint, type-aware), `pnpm fmt` (oxfmt). `pnpm check` runs greenly
-  (tsc + fmt + lint). `react-doctor --verbose` catches React Compiler bailouts.
+  `pnpm lint` (oxlint, type-aware), `pnpm fmt` (oxfmt), `pnpm test` (vitest).
+  `pnpm check` runs greenly (tsc + fmt + lint + vitest). `react-doctor --verbose`
+  catches React Compiler bailouts.
 - Package manager is **pnpm**. Don't add dependencies casually — the workspace
   enforces a supply-chain policy (`minimumReleaseAge`, `trustPolicy`).
+
+### Testing workflow (follow this exactly)
+
+Tests live in `tests/` (mirrors `src/`: `tests/lib/*.test.ts` run in Node,
+`tests/components/*.test.tsx` in happy-dom). **Vitest only** — never reach for
+Playwright or a real browser. Two distinct flows, depending on the request:
+
+- **Regression / bug fix → test-driven.** First write a test that reproduces the
+  reported bug. Run it and **confirm it fails** (red) for the right reason — this
+  proves the test actually captures the regression. Only then fix the code, and
+  re-run until it passes (green). Don't fix first and backfill a test.
+- **New feature → feature first, tests after confirmation.** Implement the
+  feature and let the user try it. **Wait for the user to confirm** the behaviour
+  is what they want, then add tests that lock in that confirmed behaviour. Don't
+  write tests for a feature whose shape the user hasn't signed off on yet.
 
 ## Stack
 
