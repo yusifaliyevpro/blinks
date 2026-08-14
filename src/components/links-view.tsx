@@ -263,10 +263,11 @@ export function LinksView({
       ) : (
         <ul className="mt-6 space-y-2">
           <AnimatePresence initial={false} mode="popLayout">
-            {optimistic.map((link) => (
+            {optimistic.map((link, index) => (
               <LinkCard
                 key={link.id}
                 link={link}
+                index={index}
                 onDelete={handleDelete}
                 pulse={pulse && pulse.id === link.id ? pulse.n : 0}
               />
