@@ -115,4 +115,4 @@ You can use Blinks locally without any issues, but if you want to make it availa
 
 ## License
 
-Blinks is licensed under the GNU AGPL 3.0. See the [LICENSE](LICENSE) file.
+AGPL-3.0-only © [Yusif Aliyev](https://yusifaliyevpro.com)
