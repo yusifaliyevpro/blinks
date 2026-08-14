@@ -211,7 +211,7 @@ export function LinksView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-16 sm:pt-10 sm:pb-20">
+    <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-16 sm:pt-3 sm:pb-20">
       <button
         type="button"
         onClick={onLogout}

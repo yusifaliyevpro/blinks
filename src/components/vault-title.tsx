@@ -3,19 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { FiCheck } from "react-icons/fi";
 
-const MAX_TITLE = 80;
+const MAX_TITLE = 30;
 const AUTOSAVE_MS = 3000;
+
+type VaultTitleProps = {
+  initialTitle: string;
+  onSave: (title: string) => Promise<void>;
+};
 
 // Inline, borderless editable title. Autosaves 3s after typing stops (or on
 // Enter) via the parent's `onSave`, and flashes a subtle check on success.
 // Also mirrors the title into the document/tab title.
-export function VaultTitle({
-  initialTitle,
-  onSave,
-}: {
-  initialTitle: string;
-  onSave: (title: string) => Promise<void>;
-}) {
+export function VaultTitle({ initialTitle, onSave }: VaultTitleProps) {
   const [title, setTitle] = useState(initialTitle);
   const [saved, setSaved] = useState(false);
   const savedRef = useRef(initialTitle); // last persisted value
@@ -84,7 +83,7 @@ export function VaultTitle({
           size={Math.max(title.length, 8) + 1}
           spellCheck={false}
           aria-label="Vault title"
-          className="max-w-full bg-transparent text-center font-display text-3xl text-text outline-none placeholder:text-muted/40"
+          className="max-w-full bg-transparent text-center font-display text-4xl text-text outline-none placeholder:text-muted/40"
         />
         <FiCheck
           aria-hidden="true"
