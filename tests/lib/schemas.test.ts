@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { blobIdSchema, ciphertextSchema, putBlobSchema, urlSchema, versionSchema } from "@/lib/schemas";
+import {
+  blobIdSchema,
+  ciphertextSchema,
+  putBlobSchema,
+  urlSchema,
+  versionSchema,
+  writeTokenSchema,
+} from "@/lib/schemas";
 
 describe("blobIdSchema", () => {
   it("accepts exactly 64 lowercase hex chars", () => {
@@ -21,13 +28,24 @@ describe("blobIdSchema", () => {
 });
 
 describe("ciphertextSchema", () => {
-  it("accepts a non-empty string within the cap", () => {
-    expect(ciphertextSchema.safeParse("x").success).toBe(true);
+  it("accepts base64 (with optional padding) within the cap", () => {
+    expect(ciphertextSchema.safeParse("A".repeat(20)).success).toBe(true);
+    expect(ciphertextSchema.safeParse(`${"AB+/".repeat(6)}==`).success).toBe(true);
     expect(ciphertextSchema.safeParse("a".repeat(3_000_000)).success).toBe(true);
   });
 
-  it("rejects an empty string", () => {
+  it("rejects an empty or too-short string", () => {
     expect(ciphertextSchema.safeParse("").success).toBe(false);
+    expect(ciphertextSchema.safeParse("x").success).toBe(false);
+    expect(ciphertextSchema.safeParse("A".repeat(19)).success).toBe(false);
+  });
+
+  it("rejects strings outside the base64 alphabet", () => {
+    // Spaces, control chars, and other punctuation must not slip through.
+    expect(ciphertextSchema.safeParse(`${"A".repeat(20)} `).success).toBe(false);
+    expect(ciphertextSchema.safeParse(`not-base64-${"A".repeat(20)}`).success).toBe(false);
+    expect(ciphertextSchema.safeParse(`<script>${"A".repeat(20)}`).success).toBe(false);
+    expect(ciphertextSchema.safeParse(`=${"A".repeat(20)}`).success).toBe(false);
   });
 
   it("rejects a string over the 3,000,000-char cap", () => {
@@ -60,11 +78,26 @@ describe("urlSchema", () => {
   });
 });
 
+describe("writeTokenSchema", () => {
+  it("accepts exactly 64 lowercase hex chars", () => {
+    expect(writeTokenSchema.safeParse("a".repeat(64)).success).toBe(true);
+    expect(writeTokenSchema.safeParse("0123456789abcdef".repeat(4)).success).toBe(true);
+  });
+
+  it("rejects the wrong length, uppercase, and non-hex", () => {
+    expect(writeTokenSchema.safeParse("a".repeat(63)).success).toBe(false);
+    expect(writeTokenSchema.safeParse("A".repeat(64)).success).toBe(false);
+    expect(writeTokenSchema.safeParse("g".repeat(64)).success).toBe(false);
+    expect(writeTokenSchema.safeParse("").success).toBe(false);
+  });
+});
+
 describe("putBlobSchema", () => {
   const valid = {
     blobId: "a".repeat(64),
-    ciphertext: "cipher",
+    ciphertext: "A".repeat(40),
     expectedVersion: 3,
+    writeToken: "b".repeat(64),
   };
 
   it("accepts a well-formed input and infers the shape", () => {
@@ -76,9 +109,12 @@ describe("putBlobSchema", () => {
     expect(putBlobSchema.safeParse({ ...valid, blobId: "short" }).success).toBe(false);
     expect(putBlobSchema.safeParse({ ...valid, ciphertext: "" }).success).toBe(false);
     expect(putBlobSchema.safeParse({ ...valid, expectedVersion: -1 }).success).toBe(false);
+    expect(putBlobSchema.safeParse({ ...valid, writeToken: "nope" }).success).toBe(false);
   });
 
-  it("rejects missing fields", () => {
+  it("rejects missing fields, including the write token", () => {
     expect(putBlobSchema.safeParse({ blobId: valid.blobId }).success).toBe(false);
+    const { writeToken: _omit, ...noToken } = valid;
+    expect(putBlobSchema.safeParse(noToken).success).toBe(false);
   });
 });

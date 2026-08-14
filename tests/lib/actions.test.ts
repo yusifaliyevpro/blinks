@@ -71,12 +71,15 @@ describe("getBlob", () => {
 });
 
 describe("putBlob", () => {
-  const input = { blobId: VALID_ID, ciphertext: "cipher", expectedVersion: 3 };
+  const CIPHERTEXT = "A".repeat(40);
+  const TOKEN = "b".repeat(64);
+  const input = { blobId: VALID_ID, ciphertext: CIPHERTEXT, expectedVersion: 3, writeToken: TOKEN };
 
-  it("maps an ok CAS result to the new version", async () => {
+  it("maps an ok CAS result to the new version and forwards the write token", async () => {
     evalScript.mockResolvedValue(["ok", 4]);
     expect(await putBlob(input)).toEqual({ version: 4 });
-    expect(evalScript).toHaveBeenCalledWith(expect.any(String), [VALID_ID], ["cipher", 3]);
+    // The write token is passed to the Lua script as the third arg (proof of possession).
+    expect(evalScript).toHaveBeenCalledWith(expect.any(String), [VALID_ID], [CIPHERTEXT, 3, TOKEN]);
   });
 
   it("maps a conflict with current data to a conflict result", async () => {
@@ -92,9 +95,16 @@ describe("putBlob", () => {
     expect(await putBlob(input)).toEqual({ conflict: true, current: null });
   });
 
+  it("throws (never silently succeeds) when the write token is rejected", async () => {
+    evalScript.mockResolvedValue(["unauthorized"]);
+    await expect(putBlob(input)).rejects.toThrow(/not authorized/i);
+  });
+
   it("rejects invalid input before touching Redis", async () => {
     await expect(putBlob({ ...input, blobId: "bad" })).rejects.toBeInstanceOf(ZodError);
     await expect(putBlob({ ...input, expectedVersion: -1 })).rejects.toBeInstanceOf(ZodError);
+    await expect(putBlob({ ...input, ciphertext: "short" })).rejects.toBeInstanceOf(ZodError);
+    await expect(putBlob({ ...input, writeToken: "bad" })).rejects.toBeInstanceOf(ZodError);
     expect(evalScript).not.toHaveBeenCalled();
   });
 
@@ -125,6 +135,17 @@ describe("fetchMetadata", () => {
     expect(getLinkPreview).toHaveBeenCalledWith(
       "https://example.com",
       expect.objectContaining({ resolveDNSHost: expect.any(Function) }),
+    );
+  });
+
+  it("uses manual redirects so every hop is re-validated by the SSRF gate", async () => {
+    // "follow" lets an http target 302 into the private network without re-checking;
+    // "manual" + handleRedirects makes link-preview-js re-run resolveDNSHost per hop.
+    getLinkPreview.mockResolvedValue({ title: "t", description: "", images: [] });
+    await fetchMetadata("https://example.com");
+    expect(getLinkPreview).toHaveBeenCalledWith(
+      "https://example.com",
+      expect.objectContaining({ followRedirects: "manual", handleRedirects: expect.any(Function) }),
     );
   });
 

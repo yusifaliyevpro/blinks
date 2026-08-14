@@ -20,7 +20,9 @@ const csp = [
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'self'",
+  "frame-src 'none'",
   "frame-ancestors 'none'",
+  "worker-src 'self'",
   "upgrade-insecure-requests",
 ].join("; ");
 

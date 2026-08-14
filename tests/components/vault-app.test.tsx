@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { VaultApp } from "@/components/vault-app";
 
-type Session = { blobId: string; key: CryptoKey };
+type Session = { blobId: string; key: CryptoKey; writeToken: string };
 
 const loadSession = vi.hoisted(() => vi.fn<() => Promise<Session | null>>());
 const decryptVault = vi.hoisted(() =>
@@ -20,7 +20,9 @@ vi.mock("@/components/password-screen", () => ({
   PasswordScreen: ({ onUnlock }: { onUnlock: (u: unknown) => void }) => (
     <button
       type="button"
-      onClick={() => onUnlock({ session: { blobId: "x", key: {} }, title: "Unlocked!", links: [], version: 0 })}
+      onClick={() =>
+        onUnlock({ session: { blobId: "x", key: {}, writeToken: "y" }, title: "Unlocked!", links: [], version: 0 })
+      }
     >
       password-screen
     </button>
@@ -38,7 +40,7 @@ vi.mock("@/components/links-view", () => ({
 }));
 
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- inert placeholder key, only ever handed to mocked crypto
-const fakeSession: Session = { blobId: "b".repeat(64), key: {} as CryptoKey };
+const fakeSession: Session = { blobId: "b".repeat(64), key: {} as CryptoKey, writeToken: "c".repeat(64) };
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -74,6 +74,7 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
         blobId: session.blobId,
         ciphertext,
         expectedVersion: expected,
+        writeToken: session.writeToken,
       });
 
       if ("version" in res) {

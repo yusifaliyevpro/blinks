@@ -52,16 +52,21 @@ Playwright or a real browser. Two distinct flows, depending on the request:
 ## Architecture
 
 - **Crypto — `src/lib/crypto.ts` (client only).** `password + NEXT_PUBLIC_KDF_SALT`
-  → Argon2id → one master → HKDF (distinct `info` labels) → non-extractable
-  AES-GCM key (`encKey`) + hex `blobId` (Redis key). Payload is **gzip-compressed
-  (`CompressionStream`) before AES-GCM encryption**. The raw key bytes persist in
-  `sessionStorage` (survive refresh, clear on tab close). Also holds the CSPRNG
-  password generator.
+  → Argon2id → one master → HKDF (three distinct `info` labels) → non-extractable
+  AES-GCM key (`encKey`) + hex `blobId` (Redis key) + hex `writeToken` (write auth).
+  Payload is **gzip-compressed (`CompressionStream`) before AES-GCM encryption**.
+  The raw key bytes + `writeToken` persist in `sessionStorage` (survive refresh,
+  clear on tab close). Also holds the CSPRNG password generator.
 - **Storage model.** The entire vault is a single blob: `AES-GCM(gzip(JSON({ title, links })))`,
-  stored in a Redis hash with fields `c` (ciphertext) + `v` (version). Every
-  mutation re-encrypts and writes the whole thing under **optimistic concurrency**
-  (version-guarded compare-and-set). We deliberately keep one opaque blob (hides
-  even link count / per-item timing) — see the compression note below.
+  stored in a Redis hash with fields `c` (ciphertext) + `v` (version) + `t`
+  (`writeToken`). Every mutation re-encrypts and writes the whole thing under
+  **optimistic concurrency** (version-guarded compare-and-set). The `blobId` is a
+  bearer id sent on every read, so writes are additionally gated by `writeToken`
+  (an independent HKDF output that can't decrypt anything): the CAS script rejects
+  an overwrite whose token doesn't match the one stored on first write, so a leaked
+  `blobId` alone can't corrupt/wipe the vault. `t` is never returned to clients. We
+  deliberately keep one opaque blob (hides even link count / per-item timing) — see
+  the compression note below.
 - **Server actions — `src/lib/actions.ts` (`"use server"`).** `getBlob`, `putBlob`,
   `fetchMetadata`. All inputs zod-validated; per-IP rate-limited (IP from
   `x-vercel-forwarded-for` → `x-forwarded-for` → `x-real-ip`). `putBlob` uses an

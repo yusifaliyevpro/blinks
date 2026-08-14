@@ -55,6 +55,9 @@ describe("resolvePublicHost — SSRF ranges are blocked (IPv4)", () => {
     ["private 192.168", "192.168.1.1"],
     ["CGNAT 100.64", "100.100.0.1"],
     ["ietf 192.0.0", "192.0.0.8"],
+    ["test-net-1 192.0.2", "192.0.2.5"],
+    ["test-net-2 198.51.100", "198.51.100.5"],
+    ["test-net-3 203.0.113", "203.0.113.5"],
     ["benchmark 198.18", "198.18.0.1"],
     ["multicast/reserved >=224", "224.0.0.1"],
   ])("blocks %s (%s)", async (_label, ip) => {
@@ -80,10 +83,22 @@ describe("resolvePublicHost — SSRF ranges are blocked (IPv6)", () => {
     ["ULA fc00", "fc00::1"],
     ["ULA fd00", "fd12:3456::1"],
     ["link-local fe80", "fe80::1"],
-    ["IPv4-mapped loopback", "::ffff:127.0.0.1"],
+    ["link-local feb0", "feb0::1"],
+    ["IPv4-mapped loopback (dotted)", "::ffff:127.0.0.1"],
+    ["IPv4-mapped loopback (hex)", "::ffff:7f00:1"],
+    ["IPv4-mapped private (hex)", "::ffff:c0a8:1"],
+    ["NAT64 well-known prefix", "64:ff9b::1.2.3.4"],
+    ["NAT64 embedding metadata IP", "64:ff9b::a9fe:a9fe"],
+    ["6to4 wrapping private v4", "2002:c0a8:0101::1"],
   ])("blocks %s (%s)", async (_label, ip) => {
     resolvesTo({ address: ip, family: 6 });
     await expect(resolvePublicHost("https://evil6.example")).rejects.toThrow("Blocked address");
+  });
+
+  it("still accepts a genuinely public 6to4 address", async () => {
+    // 2002:5db8:d822::  → embeds 93.184.216.34 (public), must NOT be blocked.
+    resolvesTo({ address: "2002:5db8:d822::1", family: 6 });
+    await expect(resolvePublicHost("https://public6to4.example")).resolves.toMatch(/^2002:/);
   });
 });
 

@@ -22,18 +22,24 @@ To help, Blinks can generate a 200 character random password in one click and co
 ## How it works
 
 <p align="center">
-  <img src="public/architecture.svg" alt="Blinks encrypts your links in the browser and sends only an opaque blob to the server and Redis" width="920">
+  <img src="public/architecture.svg" alt="Blinks encrypts your links in the browser and sends only an opaque blob plus a write token to the server and Redis" width="920">
 </p>
 
 Step by step:
 
 1. Your password and a fixed public salt go into Argon2id, a slow and memory heavy function. It returns a master secret.
-2. HKDF splits that secret into two independent parts: `encKey` (an AES-256 key) and `blobId` (a hex address).
+2. HKDF splits that secret into three independent parts: `encKey` (an AES-256 key), `blobId` (a hex address), and `writeToken` (a write permit).
 3. Your whole vault, its title and every link, gets gzipped, then encrypted as one payload with AES-256-GCM using `encKey`.
-4. The browser sends only `blobId` and the ciphertext to a server action.
-5. The server validates the input, rate limits by IP, and writes the blob into Redis at `blobId`. It writes only if the version still matches, so two open tabs never overwrite each other.
+4. The browser sends `blobId`, the ciphertext, and `writeToken` to a server action.
+5. The server validates the input, rate limits by IP, and writes the blob into Redis at `blobId`. It writes only if the version still matches (so two open tabs never overwrite each other) and only if the `writeToken` matches the one stored on the first write.
 
 The point to notice: `encKey` never leaves the browser. The server and Redis only ever hold ciphertext. Even the number of links stays hidden, because the whole vault is one opaque blob.
+
+### Why the write token
+
+`blobId` is an address, and the browser sends it on every read, so on its own it is only a pointer, not a permission. If it ever leaked, someone could not read your links (they are encrypted), but they could try to overwrite or wipe the blob sitting at that address.
+
+`writeToken` closes that gap. It is a third value derived from your password, independent from the key and the address, and the server stores it the first time you write. After that, every write must present the matching token or it is refused. So an address alone is never enough to change your data. And because `writeToken` cannot decrypt anything, storing it on the server changes nothing about the zero knowledge guarantee: the server still only holds bytes it cannot read.
 
 ## Tech stack
 
@@ -46,7 +52,8 @@ The point to notice: `encKey` never leaves the browser. The server and Redis onl
 
 - **Key derivation:** Argon2id (64 MB of memory, 3 passes). This makes guessing a password slow and expensive, even for someone holding the ciphertext.
 - **Cipher:** AES-256-GCM with a fresh random IV on every write. GCM also verifies the data was not tampered with.
-- **Key split:** HKDF-SHA256 with separate labels, so the storage address and the encryption key stay independent.
+- **Key split:** HKDF-SHA256 with separate labels, so the storage address, the encryption key, and the write token stay independent.
+- **Write authorization:** a `writeToken` (a third HKDF output) proves you hold the password before any write lands. Reads need only the `blobId`; writes need the token too, so a leaked address alone cannot corrupt or wipe your vault. The token cannot decrypt anything.
 - **No login to attack:** a wrong password lands on a different `blobId` (which is empty) or fails the GCM check. There is nothing to brute force, because there is no login step.
 
 ### A note on quantum
@@ -102,7 +109,7 @@ You can use Blinks locally without any issues, but if you want to make it availa
 
 ## Good to know
 
-- Your key survives a page refresh but clears the moment you close the tab. It lives in `sessionStorage`.
+- Your key and write token survive a page refresh but clear the moment you close the tab. They live in `sessionStorage`.
 - Some sites, especially those using Cloudflare, uses bot protection (the “Just a moment…” page). For those sites, Blinks falls back to displaying the hostname. They should work in Local because the metadata request comes from your device, but they will fail in the production server.
 - No tracking. No analytics. No third party scripts. The content security policy blocks outside scripts by design.
 

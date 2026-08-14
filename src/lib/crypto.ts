@@ -1,10 +1,13 @@
 // Client-side, zero-knowledge crypto — never runs on the server.
 //
-//   password ──Argon2id──▶ master ──HKDF(info=enc)──▶ AES-GCM key (encKey)
-//                                └──HKDF(info=id)───▶ blobId (Redis key)
+//   password ──Argon2id──▶ master ──HKDF(info=enc)───▶ AES-GCM key (encKey)
+//                                ├──HKDF(info=id)────▶ blobId (Redis key)
+//                                └──HKDF(info=write)─▶ writeToken (write auth)
 //
-// One Argon2id pass, two HKDF-SHA256 outputs (distinct `info` labels). A wrong
-// password yields a wrong blobId (Redis miss) or fails AES-GCM auth.
+// One Argon2id pass, three HKDF-SHA256 outputs (distinct `info` labels). A wrong
+// password yields a wrong blobId (Redis miss) or fails AES-GCM auth. `writeToken`
+// is an independent secret (can't decrypt anything) that proves password
+// possession to the server so a leaked blobId alone can't overwrite the vault.
 
 import { argon2id } from "hash-wasm";
 import { clientEnv } from "./env.client";
@@ -23,15 +26,18 @@ const KDF = {
 
 const ENC_INFO = te.encode("blinks:enc-key:v1");
 const ID_INFO = te.encode("blinks:blob-id:v1");
+const WRITE_INFO = te.encode("blinks:write-token:v1");
 
 const IV_BYTES = 12;
 
 const SS_ID = "blinks.blobId";
 const SS_KEY = "blinks.encKey";
+const SS_WRITE = "blinks.writeToken";
 
 export type Session = {
   blobId: string;
   key: CryptoKey;
+  writeToken: string;
 };
 
 export type Vault = Session & {
@@ -107,13 +113,14 @@ export async function deriveVault(password: string): Promise<Vault> {
   const master = await crypto.subtle.importKey("raw", ab(masterBytes), "HKDF", false, ["deriveBits"]);
 
   // Independent derivations from the same key — race, don't waterfall.
-  const [encKeyBytes, blobIdBytes] = await Promise.all([
+  const [encKeyBytes, blobIdBytes, writeTokenBytes] = await Promise.all([
     hkdf(master, argonSalt, ENC_INFO, 256),
     hkdf(master, argonSalt, ID_INFO, 256),
+    hkdf(master, argonSalt, WRITE_INFO, 256),
   ]);
 
   const key = await importAesKey(encKeyBytes);
-  return { blobId: toHex(blobIdBytes), key, encKeyBytes };
+  return { blobId: toHex(blobIdBytes), key, writeToken: toHex(writeTokenBytes), encKeyBytes };
 }
 
 // gzip before encrypting (URLs/text compress well) — same single-blob model.
@@ -154,18 +161,20 @@ export async function decryptJSON<T>(key: CryptoKey, ciphertext: string): Promis
 
 // --- Session persistence (sessionStorage: survives refresh, clears on close) ---
 
-export function saveSession(blobId: string, encKeyBytes: Uint8Array): void {
+export function saveSession(blobId: string, encKeyBytes: Uint8Array, writeToken: string): void {
   sessionStorage.setItem(SS_ID, blobId);
   sessionStorage.setItem(SS_KEY, toHex(encKeyBytes));
+  sessionStorage.setItem(SS_WRITE, writeToken);
 }
 
 export async function loadSession(): Promise<Session | null> {
   const blobId = sessionStorage.getItem(SS_ID);
   const keyHex = sessionStorage.getItem(SS_KEY);
-  if (!blobId || !keyHex) return null;
+  const writeToken = sessionStorage.getItem(SS_WRITE);
+  if (!blobId || !keyHex || !writeToken) return null;
   try {
     const key = await importAesKey(fromHex(keyHex));
-    return { blobId, key };
+    return { blobId, key, writeToken };
   } catch {
     clearSession();
     return null;
@@ -175,6 +184,7 @@ export async function loadSession(): Promise<Session | null> {
 export function clearSession(): void {
   sessionStorage.removeItem(SS_ID);
   sessionStorage.removeItem(SS_KEY);
+  sessionStorage.removeItem(SS_WRITE);
 }
 
 // --- Random password generator ---

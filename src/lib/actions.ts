@@ -9,6 +9,13 @@ import { blobIdSchema, putBlobSchema, urlSchema } from "./schemas";
 import { PUT_BLOB_CAS, type CasResult } from "./scripts";
 import type { GetBlobResult, LinkMetadata, PutBlobResult } from "./types";
 
+// SECURITY (deployment assumption): rate limiting keys off the client IP taken
+// from these forwarded headers, most-trusted first. On Vercel, `x-vercel-forwarded-for`
+// is set by the platform and cannot be spoofed by the client, so it's authoritative.
+// If you FORK and deploy elsewhere, `x-forwarded-for`/`x-real-ip` are client-spoofable
+// unless your proxy overwrites them — meaning the per-IP rate limits can be trivially
+// bypassed. Make sure your edge/proxy sets a trustworthy client-IP header and put it
+// first in this list (or the limits are cosmetic).
 const IP_HEADERS = ["x-vercel-forwarded-for", "x-forwarded-for", "x-real-ip"] as const;
 
 async function clientIp(): Promise<string> {
@@ -38,16 +45,21 @@ export async function putBlob(input: {
   blobId: string;
   ciphertext: string;
   expectedVersion: number;
+  writeToken: string;
 }): Promise<PutBlobResult> {
-  const { blobId, ciphertext, expectedVersion } = putBlobSchema.parse(input);
+  const { blobId, ciphertext, expectedVersion, writeToken } = putBlobSchema.parse(input);
   await rateLimit(blobLimiter);
 
-  const result = await redis.eval(PUT_BLOB_CAS, [blobId], [ciphertext, expectedVersion]);
+  const result = await redis.eval(PUT_BLOB_CAS, [blobId], [ciphertext, expectedVersion, writeToken]);
   // Shape is fixed by PUT_BLOB_CAS (see scripts.ts).
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-  const [status, version, current] = result as CasResult;
+  const cas = result as CasResult;
 
-  if (status === "ok") return { version };
+  // Wrong/absent write token for an existing blob — reject without leaking why.
+  if (cas[0] === "unauthorized") throw new Error("Not authorized to write this vault.");
+  if (cas[0] === "ok") return { version: cas[1] };
+
+  const [, version, current] = cas;
   return {
     conflict: true,
     current: current ? { ciphertext: current, version } : null,
@@ -77,9 +89,13 @@ export async function fetchMetadata(url: string): Promise<LinkMetadata> {
 
   try {
     // resolveDNSHost is the SSRF gate — rejects private/loopback hosts before fetch.
+    // followRedirects: "manual" + handleRedirects makes link-preview-js re-run the
+    // gate on every redirect hop (its "follow" path skips re-validation, so an http
+    // target could 302 into the private network / cloud metadata — SSRF bypass).
     const preview = await getLinkPreview(clean, {
       timeout: 5_000,
-      followRedirects: "follow",
+      followRedirects: "manual",
+      handleRedirects: () => true,
       headers: { "user-agent": USER_AGENT, "accept-language": "en-US,en;q=0.9" },
       resolveDNSHost: resolvePublicHost,
     });

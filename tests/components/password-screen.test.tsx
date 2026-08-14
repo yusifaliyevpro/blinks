@@ -2,14 +2,14 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PasswordScreen } from "@/components/password-screen";
 
-type Derived = { blobId: string; key: CryptoKey; encKeyBytes: Uint8Array };
+type Derived = { blobId: string; key: CryptoKey; writeToken: string; encKeyBytes: Uint8Array };
 
 const deriveVault = vi.hoisted(() => vi.fn<(password: string) => Promise<Derived>>());
 const decryptVault = vi.hoisted(() =>
   vi.fn<(key: CryptoKey, ct: string) => Promise<{ title: string; links: unknown[] }>>(),
 );
 const generatePassword = vi.hoisted(() => vi.fn<(length?: number) => string>());
-const saveSession = vi.hoisted(() => vi.fn<(blobId: string, encKeyBytes: Uint8Array) => void>());
+const saveSession = vi.hoisted(() => vi.fn<(blobId: string, encKeyBytes: Uint8Array, writeToken: string) => void>());
 const getBlob = vi.hoisted(() => vi.fn<(id: string) => Promise<{ ciphertext: string; version: number } | null>>());
 
 vi.mock("@/lib/crypto", () => ({ deriveVault, decryptVault, generatePassword, saveSession }));
@@ -19,8 +19,12 @@ const FAKE_VAULT: Derived = {
   blobId: "b".repeat(64),
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- inert placeholder key, only ever handed to mocked crypto
   key: {} as CryptoKey,
+  writeToken: "c".repeat(64),
   encKeyBytes: new Uint8Array(32),
 };
+
+// Passwords used to drive the unlock flow must clear the 8-char minimum.
+const GOOD_PW = "password1";
 
 // Captured per-test so assertions reference a bound mock, not navigator's getter.
 let clipboardWrite: ReturnType<typeof vi.fn<(text: string) => Promise<void>>>;
@@ -98,18 +102,18 @@ describe("PasswordScreen — unlock flow", () => {
     getBlob.mockResolvedValue(null);
     const { onUnlock, input } = renderScreen();
 
-    fireEvent.change(input, { target: { value: "pw" } });
+    fireEvent.change(input, { target: { value: GOOD_PW } });
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });
 
-    expect(saveSession).toHaveBeenCalledWith(FAKE_VAULT.blobId, FAKE_VAULT.encKeyBytes);
+    expect(saveSession).toHaveBeenCalledWith(FAKE_VAULT.blobId, FAKE_VAULT.encKeyBytes, FAKE_VAULT.writeToken);
     expect(onUnlock).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "",
         links: [],
         version: 0,
-        session: { blobId: FAKE_VAULT.blobId, key: FAKE_VAULT.key },
+        session: { blobId: FAKE_VAULT.blobId, key: FAKE_VAULT.key, writeToken: FAKE_VAULT.writeToken },
       }),
     );
     expect(decryptVault).not.toHaveBeenCalled();
@@ -120,7 +124,7 @@ describe("PasswordScreen — unlock flow", () => {
     decryptVault.mockResolvedValue({ title: "Mine", links: [{ id: "1" }] });
     const { onUnlock, input } = renderScreen();
 
-    fireEvent.change(input, { target: { value: "pw" } });
+    fireEvent.change(input, { target: { value: GOOD_PW } });
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });
@@ -134,7 +138,7 @@ describe("PasswordScreen — unlock flow", () => {
     decryptVault.mockRejectedValue(new Error("auth failure"));
     const { onUnlock, input } = renderScreen();
 
-    fireEvent.change(input, { target: { value: "wrong" } });
+    fireEvent.change(input, { target: { value: "wrongpassword" } });
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });
@@ -143,5 +147,18 @@ describe("PasswordScreen — unlock flow", () => {
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(onUnlock).not.toHaveBeenCalled();
     expect(saveSession).not.toHaveBeenCalled();
+  });
+
+  it("rejects a too-short password without deriving or unlocking (min 8 chars)", async () => {
+    const { onUnlock, input } = renderScreen();
+
+    fireEvent.change(input, { target: { value: "short" } });
+    await act(async () => {
+      fireEvent.submit(input.closest("form")!);
+    });
+
+    expect(deriveVault).not.toHaveBeenCalled();
+    expect(onUnlock).not.toHaveBeenCalled();
+    expect(input).toHaveAttribute("aria-invalid", "true");
   });
 });

@@ -12,7 +12,7 @@ vi.mock("next/image", () => ({
 
 type Meta = { title: string; description: string; image: string };
 type PutResult = { version: number } | { conflict: true; current: { ciphertext: string; version: number } | null };
-type PutInput = { blobId: string; ciphertext: string; expectedVersion: number };
+type PutInput = { blobId: string; ciphertext: string; expectedVersion: number; writeToken: string };
 
 const fetchMetadata = vi.hoisted(() => vi.fn<(url: string) => Promise<Meta>>());
 const putBlob = vi.hoisted(() => vi.fn<(input: PutInput) => Promise<PutResult>>());
@@ -26,7 +26,7 @@ vi.mock("@/lib/crypto", () => ({
 }));
 
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- inert placeholder key, only ever handed to mocked crypto
-const session = { blobId: "a".repeat(64), key: {} as CryptoKey };
+const session = { blobId: "a".repeat(64), key: {} as CryptoKey, writeToken: "c".repeat(64) };
 
 function link(over: Partial<LinkItem> = {}): LinkItem {
   return { id: "seed", url: "https://seed.com", title: "Seed", description: "", image: "", createdAt: 1, ...over };
@@ -93,6 +93,8 @@ describe("LinksView — adding", () => {
       title: "Fetched Title",
       description: "Fetched desc",
     });
+    // The write token from the session must accompany every commit.
+    expect(putBlob.mock.calls[0][0]).toMatchObject({ writeToken: "c".repeat(64) });
     expect(input).toHaveValue("");
   });
 

@@ -19,21 +19,41 @@ function isPrivateV4(ip: string): boolean {
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;
   if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
-  if (a === 192 && b === 0 && c === 0) return true;
+  if (a === 192 && b === 0 && c === 0) return true; // IETF protocol assignments
+  if (a === 192 && b === 0 && c === 2) return true; // TEST-NET-1 (documentation)
+  if (a === 198 && b === 51 && c === 100) return true; // TEST-NET-2
+  if (a === 203 && b === 0 && c === 113) return true; // TEST-NET-3
   if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
   if (a >= 224) return true; // multicast / reserved
   return false;
+}
+
+// Two 16-bit hextets → dotted IPv4 (for IPv4-in-IPv6 embeddings).
+function hextetsToV4(hi: string, lo: string): string {
+  const h = Number.parseInt(hi, 16);
+  const l = Number.parseInt(lo, 16);
+  return `${h >> 8}.${h & 255}.${l >> 8}.${l & 255}`;
 }
 
 function isPrivateV6(ip: string): boolean {
   const a = ip.toLowerCase();
   if (a === "::1" || a === "::") return true;
   if (a.startsWith("fc") || a.startsWith("fd")) return true; // ULA
-  if (a.startsWith("fe8") || a.startsWith("fe9") || a.startsWith("fea") || a.startsWith("feb")) {
-    return true; // link-local
-  }
-  const mapped = a.match(/::ffff:(\d+\.\d+\.\d+\.\d+)/); // IPv4-mapped
-  if (mapped) return isPrivateV4(mapped[1]);
+  if (/^fe[89ab]/.test(a)) return true; // link-local fe80::/10
+  if (a.startsWith("64:ff9b:")) return true; // NAT64 well-known prefix (can embed anything)
+
+  // Embedded IPv4 written in dotted form (IPv4-mapped / -compatible / NAT64).
+  const dotted = a.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+  if (dotted) return isPrivateV4(dotted[1]);
+
+  // IPv4-mapped in hex form, e.g. ::ffff:7f00:1 (= 127.0.0.1).
+  const mappedHex = a.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (mappedHex) return isPrivateV4(hextetsToV4(mappedHex[1], mappedHex[2]));
+
+  // 6to4 (2002::/16) embeds the IPv4 in the first two hextets after the prefix.
+  const sixToFour = a.match(/^2002:([0-9a-f]{1,4}):([0-9a-f]{1,4})/);
+  if (sixToFour) return isPrivateV4(hextetsToV4(sixToFour[1], sixToFour[2]));
+
   return false;
 }
 

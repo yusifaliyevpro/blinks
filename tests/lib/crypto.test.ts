@@ -40,19 +40,29 @@ describe("deriveVault", () => {
     expect(vaultA.encKeyBytes.byteLength).toBe(32);
   });
 
-  it("is deterministic — the same password yields the same blobId and key bytes", () => {
+  it("derives a 64-char lowercase-hex writeToken", () => {
+    expect(vaultA.writeToken).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("is deterministic — the same password yields the same blobId, key bytes, and writeToken", () => {
     expect(vaultA2.blobId).toBe(vaultA.blobId);
     expect([...vaultA2.encKeyBytes]).toEqual([...vaultA.encKeyBytes]);
+    expect(vaultA2.writeToken).toBe(vaultA.writeToken);
   });
 
-  it("maps different passwords to different blobIds and keys", () => {
+  it("maps different passwords to different blobIds, keys, and writeTokens", () => {
     expect(vaultB.blobId).not.toBe(vaultA.blobId);
     expect([...vaultB.encKeyBytes]).not.toEqual([...vaultA.encKeyBytes]);
+    expect(vaultB.writeToken).not.toBe(vaultA.writeToken);
   });
 
-  it("domain-separates the two derivations (blobId is not just the key in hex)", () => {
+  it("domain-separates the three derivations (blobId, key, writeToken all differ)", () => {
     const keyHex = [...vaultA.encKeyBytes].map((b) => b.toString(16).padStart(2, "0")).join("");
     expect(vaultA.blobId).not.toBe(keyHex);
+    // writeToken must be independent of both the blobId and the encryption key —
+    // otherwise it would leak the key or be guessable from the (bearer) blobId.
+    expect(vaultA.writeToken).not.toBe(vaultA.blobId);
+    expect(vaultA.writeToken).not.toBe(keyHex);
   });
 
   it("exposes a non-extractable AES-GCM CryptoKey", () => {
@@ -141,12 +151,13 @@ describe("session persistence", () => {
     expect(await loadSession()).toBeNull();
   });
 
-  it("saves and reconstructs a working key from the raw bytes", async () => {
-    saveSession(vaultA.blobId, vaultA.encKeyBytes);
+  it("saves and reconstructs a working key and writeToken from the raw bytes", async () => {
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken);
 
     const session = await loadSession();
     expect(session).not.toBeNull();
     expect(session!.blobId).toBe(vaultA.blobId);
+    expect(session!.writeToken).toBe(vaultA.writeToken);
 
     // The reconstructed key must decrypt data sealed by the original derived key.
     const ct = await encryptJSON(vaultA.key, { proof: "of-work" });
@@ -154,21 +165,28 @@ describe("session persistence", () => {
   });
 
   it("stores the key as hex, never the JWK/exportable form", () => {
-    saveSession(vaultA.blobId, vaultA.encKeyBytes);
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken);
     const stored = sessionStorage.getItem("blinks.encKey");
     expect(stored).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("clearSession removes both stored fields", async () => {
-    saveSession(vaultA.blobId, vaultA.encKeyBytes);
+  it("clearSession removes all stored fields", async () => {
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken);
     clearSession();
     expect(sessionStorage.getItem("blinks.blobId")).toBeNull();
     expect(sessionStorage.getItem("blinks.encKey")).toBeNull();
+    expect(sessionStorage.getItem("blinks.writeToken")).toBeNull();
     expect(await loadSession()).toBeNull();
   });
 
-  it("returns null (and clears) when only one field is present", async () => {
+  it("returns null (and clears) when any field is missing", async () => {
     sessionStorage.setItem("blinks.blobId", vaultA.blobId);
+    expect(await loadSession()).toBeNull();
+
+    // blobId + key but no writeToken must also fail closed.
+    sessionStorage.clear();
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken);
+    sessionStorage.removeItem("blinks.writeToken");
     expect(await loadSession()).toBeNull();
   });
 });

@@ -8,6 +8,8 @@ import { allowPasswordManagers } from "@/lib/env.client";
 import type { LinkItem } from "@/lib/types";
 import { Logo } from "./logo";
 
+const MIN_PASSWORD = 8;
+
 export type Unlocked = {
   session: Session;
   title: string;
@@ -25,7 +27,12 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!password || busy) return;
+    // Minimum 8 chars — a weak password is the user's own risk, but reject the
+    // obviously-too-short ones (the generator produces 200). Shake as feedback.
+    if (!password || password.length < MIN_PASSWORD || busy) {
+      if (password.length > 0 && password.length < MIN_PASSWORD) setShake(true);
+      return;
+    }
     setBusy(true);
     setShake(false);
 
@@ -44,9 +51,9 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
         version = blob.version;
       }
 
-      saveSession(vault.blobId, vault.encKeyBytes);
+      saveSession(vault.blobId, vault.encKeyBytes, vault.writeToken);
       onUnlock({
-        session: { blobId: vault.blobId, key: vault.key },
+        session: { blobId: vault.blobId, key: vault.key, writeToken: vault.writeToken },
         title,
         links,
         version,
@@ -96,6 +103,7 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
             autoFocus
             autoComplete={allowPasswordManagers ? "current-password" : "off"}
             spellCheck={false}
+            minLength={MIN_PASSWORD}
             disabled={busy}
             value={password}
             placeholder="Password"
