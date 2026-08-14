@@ -107,6 +107,9 @@ You can use Blinks locally without any issues, but if you want to make it availa
 3. Add the same environment variables from `.env`.
 4. Make sure `NEXT_PUBLIC_KDF_SALT` matches the value you used locally, or your existing links will not open.
 
+> NOTE:
+> The per-IP rate limits key off the client IP from a forwarded header. On Vercel this is `x-vercel-forwarded-for`, which the platform sets and clients cannot spoof, so it works out of the box. On any other host, put the header your proxy sets first in the `IP_HEADERS` array in `actions.ts`, and make sure that proxy overwrites any client-supplied value. Otherwise the IP is spoofable and the limits can be bypassed.
+
 ## Good to know
 
 - Your key and write token survive a page refresh but clear the moment you close the tab. They live in `sessionStorage`.

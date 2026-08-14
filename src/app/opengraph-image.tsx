@@ -17,34 +17,32 @@ const eyeSrc = `data:image/svg+xml;base64,${Buffer.from(eye).toString("base64")}
 
 export default function Image() {
   return new ImageResponse(
-    (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 40,
+        background: "#0a0a0c",
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={eyeSrc} width={228} height={152} alt="" />
       <div
         style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 40,
-          background: "#0a0a0c",
+          fontFamily: "Instrument Serif",
+          fontSize: 168,
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+          color: "#ececf0",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={eyeSrc} width={228} height={152} alt="" />
-        <div
-          style={{
-            fontFamily: "Instrument Serif",
-            fontSize: 168,
-            lineHeight: 1,
-            letterSpacing: "-0.02em",
-            color: "#ececf0",
-          }}
-        >
-          Blinks
-        </div>
+        Blinks
       </div>
-    ),
+    </div>,
     {
       ...size,
       fonts: [{ name: "Instrument Serif", data: instrumentSerif, style: "normal", weight: 400 }],

@@ -31,6 +31,22 @@ describe("resolvePublicHost — protocol and host gating", () => {
     await expect(resolvePublicHost("http://printer.local/x")).rejects.toThrow("Blocked host");
     expect(lookup).not.toHaveBeenCalled();
   });
+
+  it("blocks non-standard ports before any DNS lookup (no port scanning)", async () => {
+    await expect(resolvePublicHost("http://example.com:22/x")).rejects.toThrow("Blocked port");
+    await expect(resolvePublicHost("http://example.com:6379/x")).rejects.toThrow("Blocked port");
+    await expect(resolvePublicHost("https://example.com:8080/x")).rejects.toThrow("Blocked port");
+    expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it("allows the default and standard web ports", async () => {
+    resolvesTo({ address: "93.184.216.34", family: 4 });
+    await expect(resolvePublicHost("https://example.com/x")).resolves.toBe("93.184.216.34");
+    resolvesTo({ address: "93.184.216.34", family: 4 });
+    await expect(resolvePublicHost("http://example.com:80/x")).resolves.toBe("93.184.216.34");
+    resolvesTo({ address: "93.184.216.34", family: 4 });
+    await expect(resolvePublicHost("https://example.com:443/x")).resolves.toBe("93.184.216.34");
+  });
 });
 
 describe("resolvePublicHost — public addresses pass", () => {
@@ -90,6 +106,10 @@ describe("resolvePublicHost — SSRF ranges are blocked (IPv6)", () => {
     ["NAT64 well-known prefix", "64:ff9b::1.2.3.4"],
     ["NAT64 embedding metadata IP", "64:ff9b::a9fe:a9fe"],
     ["6to4 wrapping private v4", "2002:c0a8:0101::1"],
+    ["documentation 2001:db8", "2001:db8::1"],
+    ["IETF protocol / Teredo 2001::/23", "2001::1"],
+    ["ORCHIDv2 2001:20::/28", "2001:20::1"],
+    ["discard-only 100::/64", "100::1"],
   ])("blocks %s (%s)", async (_label, ip) => {
     resolvesTo({ address: ip, family: 6 });
     await expect(resolvePublicHost("https://evil6.example")).rejects.toThrow("Blocked address");
