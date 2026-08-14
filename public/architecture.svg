@@ -113,5 +113,5 @@
 
   <!-- footer callout -->
   <rect x="28" y="576" width="904" height="36" rx="10" fill="#14142a" stroke="#6366f1" stroke-opacity="0.4"/>
-  <text class="t" x="480" y="599" text-anchor="middle">The key is made in your browser and never leaves. The server holds only bytes it cannot read — and only your writeToken can overwrite them.</text>
+  <text class="t" x="480" y="599" text-anchor="middle">The key is made in your browser and never leaves. The server holds only bytes it cannot read, and only your writeToken can overwrite them.</text>
 </svg>
