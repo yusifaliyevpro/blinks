@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { FiCheck, FiLoader, FiTrash2 } from "react-icons/fi";
 import type { LinkItem } from "@/lib/types";
@@ -113,11 +114,13 @@ export function LinkCard({
         </div>
 
         {showImage && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={link.image}
             alt=""
             loading="lazy"
+            unoptimized
+            width={1200}
+            height={630}
             onError={() => setImageOk(false)}
             className="aspect-1200/630 w-40 shrink-0 rounded-lg border border-border/60 object-cover sm:w-52"
           />
