@@ -7,15 +7,10 @@ export const blobIdSchema = z.string().regex(/^[0-9a-f]{64}$/);
 // blobId, independent derivation). Proves password possession for writes.
 export const writeTokenSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
-// base64(iv || ciphertext). Constrained to the base64 alphabet (+ padding) and a
-// realistic minimum length (12-byte IV + 16-byte GCM tag alone base64s well past
-// 20 chars) so obviously-malformed writes are rejected before Redis. Capped to
-// keep a single blob sane.
-export const ciphertextSchema = z
-  .string()
-  .min(20)
-  .max(3_000_000)
-  .regex(/^[A-Za-z0-9+/]+={0,2}$/);
+// base64(iv || ciphertext), validated as real base64 by zod. Floored at a
+// realistic minimum (a 12-byte IV + 16-byte GCM tag alone base64s well past 20
+// chars) and capped to keep a single blob sane.
+export const ciphertextSchema = z.base64().min(20).max(3_000_000);
 
 export const versionSchema = z.number().int().min(0);
 

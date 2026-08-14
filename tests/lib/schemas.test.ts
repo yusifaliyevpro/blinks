@@ -29,8 +29,9 @@ describe("blobIdSchema", () => {
 
 describe("ciphertextSchema", () => {
   it("accepts base64 (with optional padding) within the cap", () => {
-    expect(ciphertextSchema.safeParse("A".repeat(20)).success).toBe(true);
-    expect(ciphertextSchema.safeParse(`${"AB+/".repeat(6)}==`).success).toBe(true);
+    expect(ciphertextSchema.safeParse("A".repeat(40)).success).toBe(true);
+    expect(ciphertextSchema.safeParse(`${"A".repeat(22)}==`).success).toBe(true);
+    expect(ciphertextSchema.safeParse(`${"AB+/".repeat(6)}`).success).toBe(true);
     expect(ciphertextSchema.safeParse("a".repeat(3_000_000)).success).toBe(true);
   });
 
