@@ -28,6 +28,23 @@ describe("dangerous URL schemes never validate (href XSS guard)", () => {
     expect(isValidLink("https://example.com")).toBe(true);
     expect(isValidLink(normalizeUrl("example.com/path"))).toBe(true);
   });
+
+  // Regression: `z.url()` accepts a `javascript://host.tld` form whose hostname
+  // has a dot, so the old dotted-host-only check let it through directly — only
+  // normalizeUrl (prepending https://) masked it. isValidLink must reject it on
+  // its own, without relying on any upstream normalization.
+  const dottedHostDangerous = [
+    "javascript://example.com/%0aalert(1)",
+    "javascript://a.b%0aalert(document.cookie)",
+    "data://foo.bar/x",
+    "vbscript://a.b/x",
+  ];
+
+  for (const input of dottedHostDangerous) {
+    it(`rejects the dotted-host scheme bypass ${JSON.stringify(input)} without normalization`, () => {
+      expect(isValidLink(input)).toBe(false);
+    });
+  }
 });
 
 describe("hostOf", () => {
