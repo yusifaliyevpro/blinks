@@ -116,7 +116,7 @@ export function VaultIO({ getLinks, getTitle, onImport }: VaultIOProps) {
         className={buttonClass}
       >
         <FiDownload className="h-4 w-4" />
-        Export
+        <span className="hidden sm:flex">Export</span>
       </button>
       <button
         type="button"
@@ -126,7 +126,7 @@ export function VaultIO({ getLinks, getTitle, onImport }: VaultIOProps) {
         className={buttonClass}
       >
         <FiUpload className="h-4 w-4" />
-        Import
+        <span className="hidden sm:flex">Import</span>
       </button>
       <input ref={fileRef} type="file" accept="application/json,.json" onChange={handleFile} className="hidden" />
     </div>

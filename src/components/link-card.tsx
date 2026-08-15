@@ -76,9 +76,13 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex min-w-0 flex-1 items-center gap-4 rounded-xl border border-border bg-panel p-3 transition-colors hover:bg-hover"
+          className="group flex min-w-0 flex-1 items-start gap-4 rounded-xl border border-border bg-panel p-3 transition-colors hover:bg-hover"
         >
-          <div className="min-w-0 flex-1">
+          {/* When there's a thumbnail, the text keeps a fixed (responsive) width
+              so it truncates at the same point regardless of hover; the slack
+              between it and the image (ml-auto) absorbs the delete button's
+              slide-in. Text-only cards keep filling the row. */}
+          <div className={`mt-2.25 min-w-0 ${showImage ? "basis-72 sm:basis-80" : "flex-1"}`}>
             {link.pending && !link.title ? (
               <div className="flex items-center gap-2 text-muted">
                 <FiLoader className="h-4 w-4 animate-spin" />
@@ -102,7 +106,7 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
               width={1200}
               height={630}
               onError={() => setImageOk(false)}
-              className="aspect-1200/630 w-40 shrink-0 rounded-lg border border-border/60 object-cover select-none sm:w-52"
+              className="ml-auto aspect-1200/630 w-40 shrink-0 self-center rounded-lg border border-border/60 object-cover select-none sm:w-52"
             />
           )}
         </a>
