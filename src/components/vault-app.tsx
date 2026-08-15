@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBlob } from "@/lib/actions";
 import { clearSession, decryptVault, loadSession } from "@/lib/crypto";
+import { getBlob } from "@/lib/store";
 import type { LinkItem } from "@/lib/types";
 import { LinksView } from "./links-view";
 import { PasswordScreen, type Unlocked } from "./password-screen";
 
 type Phase = { kind: "checking" } | { kind: "locked" } | ({ kind: "unlocked" } & Unlocked);
 
-export function VaultApp() {
+export function VaultApp({ redisAvailable }: { redisAvailable: boolean }) {
   const [phase, setPhase] = useState<Phase>({ kind: "checking" });
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function VaultApp() {
         return;
       }
       try {
-        const blob = await getBlob(session.blobId);
+        const blob = await getBlob(session.backend, session.blobId);
         let title = "";
         let links: LinkItem[] = [];
         let version = 0;
@@ -54,7 +54,7 @@ export function VaultApp() {
   }
 
   if (phase.kind === "locked") {
-    return <PasswordScreen onUnlock={(u) => setPhase({ kind: "unlocked", ...u })} />;
+    return <PasswordScreen redisAvailable={redisAvailable} onUnlock={(u) => setPhase({ kind: "unlocked", ...u })} />;
   }
 
   return (

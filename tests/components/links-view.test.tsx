@@ -10,13 +10,15 @@ vi.mock("next/image", () => ({
   },
 }));
 
+type Backend = "redis" | "local";
 type Meta = { title: string; description: string; image: string };
 type PutResult = { version: number } | { conflict: true; current: { ciphertext: string; version: number } | null };
 type PutInput = { blobId: string; ciphertext: string; expectedVersion: number; writeToken: string };
 
 const fetchMetadata = vi.hoisted(() => vi.fn<(url: string) => Promise<Meta>>());
-const putBlob = vi.hoisted(() => vi.fn<(input: PutInput) => Promise<PutResult>>());
-vi.mock("@/lib/actions", () => ({ fetchMetadata, putBlob }));
+const putBlob = vi.hoisted(() => vi.fn<(backend: Backend, input: PutInput) => Promise<PutResult>>());
+vi.mock("@/lib/actions", () => ({ fetchMetadata }));
+vi.mock("@/lib/store", () => ({ putBlob }));
 
 // Make the "ciphertext" a transparent JSON round-trip so a commit's payload can
 // be inspected directly, and conflict-rebasing can decrypt it back.
@@ -26,7 +28,7 @@ vi.mock("@/lib/crypto", () => ({
 }));
 
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- inert placeholder key, only ever handed to mocked crypto
-const session = { blobId: "a".repeat(64), key: {} as CryptoKey, writeToken: "c".repeat(64) };
+const session = { blobId: "a".repeat(64), key: {} as CryptoKey, writeToken: "c".repeat(64), backend: "redis" as const };
 
 function link(over: Partial<LinkItem> = {}): LinkItem {
   return { id: "seed", url: "https://seed.com", title: "Seed", description: "", image: "", createdAt: 1, ...over };
@@ -46,10 +48,11 @@ function renderView(props: Partial<Parameters<typeof LinksView>[0]> = {}) {
   return { onLogout, input: screen.getByPlaceholderText(/paste a link/i) };
 }
 
-// The last vault payload handed to putBlob, decoded.
+// The last vault payload handed to putBlob, decoded. Arg 0 is the backend; the
+// input object (with the ciphertext) is arg 1.
 function lastCommitted() {
   const calls = putBlob.mock.calls;
-  return JSON.parse(calls[calls.length - 1][0].ciphertext);
+  return JSON.parse(calls[calls.length - 1][1].ciphertext);
 }
 
 async function addLink(input: HTMLElement, url: string) {
@@ -93,8 +96,8 @@ describe("LinksView — adding", () => {
       title: "Fetched Title",
       description: "Fetched desc",
     });
-    // The write token from the session must accompany every commit.
-    expect(putBlob.mock.calls[0][0]).toMatchObject({ writeToken: "c".repeat(64) });
+    // The write token from the session must accompany every commit (arg 1).
+    expect(putBlob.mock.calls[0][1]).toMatchObject({ writeToken: "c".repeat(64) });
     expect(input).toHaveValue("");
   });
 
@@ -187,8 +190,8 @@ describe("LinksView — optimistic concurrency", () => {
     await addLink(input, "https://mine.com");
 
     await waitFor(() => expect(putBlob).toHaveBeenCalledTimes(2));
-    // Second attempt was guarded against the server's version.
-    expect(putBlob.mock.calls[1][0].expectedVersion).toBe(5);
+    // Second attempt was guarded against the server's version (input is arg 1).
+    expect(putBlob.mock.calls[1][1].expectedVersion).toBe(5);
 
     const committed = lastCommitted();
     const urls = committed.links.map((l: LinkItem) => l.url);

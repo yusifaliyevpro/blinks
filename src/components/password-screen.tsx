@@ -2,10 +2,18 @@
 
 import { useRef, useState } from "react";
 import { FiCheck, FiEye, FiEyeOff, FiRefreshCw } from "react-icons/fi";
-import { getBlob } from "@/lib/actions";
-import { decryptVault, deriveVault, generatePassword, saveSession, type Session } from "@/lib/crypto";
+import {
+  decryptVault,
+  deriveVault,
+  generatePassword,
+  loadBackendPreference,
+  saveBackendPreference,
+  saveSession,
+  type Session,
+} from "@/lib/crypto";
 import { allowPasswordManagers } from "@/lib/env.client";
-import type { LinkItem } from "@/lib/types";
+import { getBlob } from "@/lib/store";
+import type { LinkItem, StorageBackend } from "@/lib/types";
 import { Logo } from "./logo";
 
 const MIN_PASSWORD = 8;
@@ -17,13 +25,29 @@ export type Unlocked = {
   version: number;
 };
 
-export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }) {
+export function PasswordScreen({
+  redisAvailable,
+  onUnlock,
+}: {
+  redisAvailable: boolean;
+  onUnlock: (u: Unlocked) => void;
+}) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [shake, setShake] = useState(false);
   const [copied, setCopied] = useState(false);
   const [show, setShow] = useState(false);
+  // Preselect the last-used backend (remembered across tabs) when the remote
+  // store is available; otherwise local is the only path.
+  const [backend, setBackend] = useState<StorageBackend>(() =>
+    redisAvailable ? (loadBackendPreference() ?? "redis") : "local",
+  );
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function selectBackend(value: StorageBackend) {
+    setBackend(value);
+    saveBackendPreference(value);
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -38,7 +62,7 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
 
     try {
       const vault = await deriveVault(password);
-      const blob = await getBlob(vault.blobId);
+      const blob = await getBlob(backend, vault.blobId);
 
       let title = "";
       let links: LinkItem[] = [];
@@ -51,9 +75,9 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
         version = blob.version;
       }
 
-      saveSession(vault.blobId, vault.encKeyBytes, vault.writeToken);
+      saveSession(vault.blobId, vault.encKeyBytes, vault.writeToken, backend);
       onUnlock({
-        session: { blobId: vault.blobId, key: vault.key, writeToken: vault.writeToken },
+        session: { blobId: vault.blobId, key: vault.key, writeToken: vault.writeToken, backend },
         title,
         links,
         version,
@@ -147,6 +171,43 @@ export function PasswordScreen({ onUnlock }: { onUnlock: (u: Unlocked) => void }
 
         {password.length > 0 && (
           <p className="absolute top-full left-0 mt-2 text-xs text-muted tabular-nums select-none">{password.length}</p>
+        )}
+
+        {redisAvailable && (
+          <div
+            role="radiogroup"
+            aria-label="Storage backend"
+            className="absolute top-full left-1/2 mt-7 flex w-36 -translate-x-1/2 overflow-hidden rounded-lg border border-border bg-panel text-xs"
+          >
+            {/* Neutral fill that slides under the active segment (CSS transform). */}
+            <span
+              aria-hidden
+              className={`pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-elevated transition-transform duration-200 ease-out ${
+                backend === "local" ? "translate-x-full" : "translate-x-0"
+              }`}
+            />
+            {(
+              [
+                ["redis", "Redis"],
+                ["local", "Local"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={backend === value}
+                disabled={busy}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => selectBackend(value)}
+                className={`relative z-10 flex-1 py-1.5 text-center transition-colors focus:outline-none disabled:opacity-60 ${
+                  backend === value ? "text-text" : "text-muted hover:text-text"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         )}
       </form>
     </div>

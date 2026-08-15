@@ -1,9 +1,21 @@
+// Where the encrypted blob lives. "redis" = the shared server-side store;
+// "local" = this browser's IndexedDB (offline, single-device). The choice never
+// touches the crypto — only the write destination changes.
+export type StorageBackend = "redis" | "local";
+
 export type EncryptedBlob = {
   ciphertext: string;
   version: number;
 };
 
 export type GetBlobResult = EncryptedBlob | null;
+
+export type PutBlobInput = {
+  blobId: string;
+  ciphertext: string;
+  expectedVersion: number;
+  writeToken: string;
+};
 
 export type PutBlobResult = { version: number } | { conflict: true; current: EncryptedBlob | null };
 

@@ -3,8 +3,9 @@
 import { AnimatePresence } from "motion/react";
 import { startTransition, useEffect, useOptimistic, useRef, useState } from "react";
 import { FiCornerDownLeft, FiLogOut } from "react-icons/fi";
-import { fetchMetadata, putBlob } from "@/lib/actions";
+import { fetchMetadata } from "@/lib/actions";
 import { decryptVault, encryptJSON, type Session } from "@/lib/crypto";
+import { putBlob } from "@/lib/store";
 import type { LinkItem, VaultData } from "@/lib/types";
 import { canonicalKey, isValidLink, normalizeUrl } from "@/lib/url-utils";
 import { LinkCard, type DisplayLink } from "./link-card";
@@ -70,7 +71,7 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
     for (let attempt = 0; attempt < 6; attempt++) {
       const next = mutate(base);
       const ciphertext = await encryptJSON(session.key, next);
-      const res = await putBlob({
+      const res = await putBlob(session.backend, {
         blobId: session.blobId,
         ciphertext,
         expectedVersion: expected,

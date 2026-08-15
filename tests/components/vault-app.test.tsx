@@ -2,17 +2,20 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { VaultApp } from "@/components/vault-app";
 
-type Session = { blobId: string; key: CryptoKey; writeToken: string };
+type Backend = "redis" | "local";
+type Session = { blobId: string; key: CryptoKey; writeToken: string; backend: Backend };
 
 const loadSession = vi.hoisted(() => vi.fn<() => Promise<Session | null>>());
 const decryptVault = vi.hoisted(() =>
   vi.fn<(key: CryptoKey, ct: string) => Promise<{ title: string; links: unknown[] }>>(),
 );
 const clearSession = vi.hoisted(() => vi.fn<() => void>());
-const getBlob = vi.hoisted(() => vi.fn<(id: string) => Promise<{ ciphertext: string; version: number } | null>>());
+const getBlob = vi.hoisted(() =>
+  vi.fn<(backend: Backend, id: string) => Promise<{ ciphertext: string; version: number } | null>>(),
+);
 
 vi.mock("@/lib/crypto", () => ({ loadSession, decryptVault, clearSession }));
-vi.mock("@/lib/actions", () => ({ getBlob }));
+vi.mock("@/lib/store", () => ({ getBlob }));
 
 // Replace the heavy children with markers so this suite exercises only the
 // phase machine (checking → locked → unlocked) and its wiring.
@@ -21,7 +24,12 @@ vi.mock("@/components/password-screen", () => ({
     <button
       type="button"
       onClick={() =>
-        onUnlock({ session: { blobId: "x", key: {}, writeToken: "y" }, title: "Unlocked!", links: [], version: 0 })
+        onUnlock({
+          session: { blobId: "x", key: {}, writeToken: "y", backend: "redis" },
+          title: "Unlocked!",
+          links: [],
+          version: 0,
+        })
       }
     >
       password-screen
@@ -39,8 +47,13 @@ vi.mock("@/components/links-view", () => ({
   ),
 }));
 
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- inert placeholder key, only ever handed to mocked crypto
-const fakeSession: Session = { blobId: "b".repeat(64), key: {} as CryptoKey, writeToken: "c".repeat(64) };
+const fakeSession: Session = {
+  blobId: "b".repeat(64),
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- inert placeholder key, only ever handed to mocked crypto
+  key: {} as CryptoKey,
+  writeToken: "c".repeat(64),
+  backend: "redis",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -49,7 +62,7 @@ beforeEach(() => {
 describe("VaultApp — phase machine", () => {
   it("falls back to the locked screen when there is no stored session", async () => {
     loadSession.mockResolvedValue(null);
-    render(<VaultApp />);
+    render(<VaultApp redisAvailable={true} />);
     expect(await screen.findByText("password-screen")).toBeInTheDocument();
     expect(getBlob).not.toHaveBeenCalled();
   });
@@ -59,16 +72,27 @@ describe("VaultApp — phase machine", () => {
     getBlob.mockResolvedValue({ ciphertext: "ct", version: 3 });
     decryptVault.mockResolvedValue({ title: "Restored", links: [] });
 
-    render(<VaultApp />);
+    render(<VaultApp redisAvailable={true} />);
     expect(await screen.findByText("links-view: Restored")).toBeInTheDocument();
     expect(decryptVault).toHaveBeenCalledWith(fakeSession.key, "ct");
+    expect(getBlob).toHaveBeenCalledWith("redis", fakeSession.blobId);
+  });
+
+  it("reads from the backend the stored session was saved under", async () => {
+    loadSession.mockResolvedValue({ ...fakeSession, backend: "local" });
+    getBlob.mockResolvedValue({ ciphertext: "ct", version: 2 });
+    decryptVault.mockResolvedValue({ title: "Offline", links: [] });
+
+    render(<VaultApp redisAvailable={true} />);
+    expect(await screen.findByText("links-view: Offline")).toBeInTheDocument();
+    expect(getBlob).toHaveBeenCalledWith("local", fakeSession.blobId);
   });
 
   it("unlocks to an empty vault when the stored session has no blob yet", async () => {
     loadSession.mockResolvedValue(fakeSession);
     getBlob.mockResolvedValue(null);
 
-    render(<VaultApp />);
+    render(<VaultApp redisAvailable={true} />);
     expect(await screen.findByText(/^links-view:/)).toBeInTheDocument();
     expect(decryptVault).not.toHaveBeenCalled();
   });
@@ -78,14 +102,14 @@ describe("VaultApp — phase machine", () => {
     getBlob.mockResolvedValue({ ciphertext: "ct", version: 1 });
     decryptVault.mockRejectedValue(new Error("stale key"));
 
-    render(<VaultApp />);
+    render(<VaultApp redisAvailable={true} />);
     expect(await screen.findByText("password-screen")).toBeInTheDocument();
     expect(clearSession).toHaveBeenCalledOnce();
   });
 
   it("transitions to the vault after a manual unlock", async () => {
     loadSession.mockResolvedValue(null);
-    render(<VaultApp />);
+    render(<VaultApp redisAvailable={true} />);
 
     fireEvent.click(await screen.findByText("password-screen"));
     expect(await screen.findByText("links-view: Unlocked!")).toBeInTheDocument();
@@ -94,7 +118,7 @@ describe("VaultApp — phase machine", () => {
   it("logs out back to the password screen, clearing the session", async () => {
     loadSession.mockResolvedValue(fakeSession);
     getBlob.mockResolvedValue(null);
-    render(<VaultApp />);
+    render(<VaultApp redisAvailable={true} />);
 
     fireEvent.click(await screen.findByText("logout"));
     await waitFor(() => expect(screen.getByText("password-screen")).toBeInTheDocument());

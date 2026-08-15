@@ -30,3 +30,10 @@ Object.defineProperty(globalThis, "sessionStorage", {
   writable: true,
   configurable: true,
 });
+
+// localStorage backs the cross-tab backend preference helpers.
+Object.defineProperty(globalThis, "localStorage", {
+  value: new MemoryStorage(),
+  writable: true,
+  configurable: true,
+});

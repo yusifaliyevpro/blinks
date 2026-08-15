@@ -6,7 +6,9 @@ import {
   deriveVault,
   encryptJSON,
   generatePassword,
+  loadBackendPreference,
   loadSession,
+  saveBackendPreference,
   saveSession,
 } from "@/lib/crypto";
 import type { VaultData } from "@/lib/types";
@@ -22,6 +24,7 @@ let vaultB: Awaited<ReturnType<typeof deriveVault>>;
 
 beforeEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
 });
 
 describe("deriveVault", () => {
@@ -152,7 +155,7 @@ describe("session persistence", () => {
   });
 
   it("saves and reconstructs a working key and writeToken from the raw bytes", async () => {
-    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken);
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken, "redis");
 
     const session = await loadSession();
     expect(session).not.toBeNull();
@@ -164,18 +167,30 @@ describe("session persistence", () => {
     expect(await decryptJSON(session!.key, ct)).toEqual({ proof: "of-work" });
   });
 
+  it("persists and restores the chosen backend", async () => {
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken, "local");
+    expect((await loadSession())!.backend).toBe("local");
+  });
+
+  it("defaults to the redis backend for an older session with no stored backend", async () => {
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken, "local");
+    sessionStorage.removeItem("blinks.backend");
+    expect((await loadSession())!.backend).toBe("redis");
+  });
+
   it("stores the key as hex, never the JWK/exportable form", () => {
-    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken);
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken, "redis");
     const stored = sessionStorage.getItem("blinks.encKey");
     expect(stored).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("clearSession removes all stored fields", async () => {
-    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken);
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken, "redis");
     clearSession();
     expect(sessionStorage.getItem("blinks.blobId")).toBeNull();
     expect(sessionStorage.getItem("blinks.encKey")).toBeNull();
     expect(sessionStorage.getItem("blinks.writeToken")).toBeNull();
+    expect(sessionStorage.getItem("blinks.backend")).toBeNull();
     expect(await loadSession()).toBeNull();
   });
 
@@ -185,9 +200,33 @@ describe("session persistence", () => {
 
     // blobId + key but no writeToken must also fail closed.
     sessionStorage.clear();
-    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken);
+    saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken, "redis");
     sessionStorage.removeItem("blinks.writeToken");
     expect(await loadSession()).toBeNull();
+  });
+});
+
+describe("backend preference", () => {
+  it("returns null when no preference has been saved", () => {
+    expect(loadBackendPreference()).toBeNull();
+  });
+
+  it("round-trips a saved preference", () => {
+    saveBackendPreference("local");
+    expect(loadBackendPreference()).toBe("local");
+    saveBackendPreference("redis");
+    expect(loadBackendPreference()).toBe("redis");
+  });
+
+  it("ignores an unrecognized stored value", () => {
+    localStorage.setItem("blinks.backend.pref", "sqlite");
+    expect(loadBackendPreference()).toBeNull();
+  });
+
+  it("persists independently of the session (survives clearSession)", () => {
+    saveBackendPreference("local");
+    clearSession();
+    expect(loadBackendPreference()).toBe("local");
   });
 });
 

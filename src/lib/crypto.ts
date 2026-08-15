@@ -11,7 +11,7 @@
 
 import { argon2id } from "hash-wasm";
 import { clientEnv } from "./env.client";
-import type { VaultData } from "./types";
+import type { StorageBackend, VaultData } from "./types";
 
 const te = new TextEncoder();
 const td = new TextDecoder();
@@ -33,14 +33,21 @@ const IV_BYTES = 12;
 const SS_ID = "blinks.blobId";
 const SS_KEY = "blinks.encKey";
 const SS_WRITE = "blinks.writeToken";
+const SS_BACKEND = "blinks.backend";
 
 export type Session = {
   blobId: string;
   key: CryptoKey;
   writeToken: string;
+  backend: StorageBackend;
 };
 
-export type Vault = Session & {
+// The raw derivation output. `backend` is a runtime choice (not derived), so it's
+// added when the Session is assembled at unlock, not here.
+export type Vault = {
+  blobId: string;
+  key: CryptoKey;
+  writeToken: string;
   encKeyBytes: Uint8Array;
 };
 
@@ -161,10 +168,16 @@ export async function decryptJSON<T>(key: CryptoKey, ciphertext: string): Promis
 
 // --- Session persistence (sessionStorage: survives refresh, clears on close) ---
 
-export function saveSession(blobId: string, encKeyBytes: Uint8Array, writeToken: string): void {
+export function saveSession(
+  blobId: string,
+  encKeyBytes: Uint8Array,
+  writeToken: string,
+  backend: StorageBackend,
+): void {
   sessionStorage.setItem(SS_ID, blobId);
   sessionStorage.setItem(SS_KEY, toHex(encKeyBytes));
   sessionStorage.setItem(SS_WRITE, writeToken);
+  sessionStorage.setItem(SS_BACKEND, backend);
 }
 
 export async function loadSession(): Promise<Session | null> {
@@ -172,9 +185,11 @@ export async function loadSession(): Promise<Session | null> {
   const keyHex = sessionStorage.getItem(SS_KEY);
   const writeToken = sessionStorage.getItem(SS_WRITE);
   if (!blobId || !keyHex || !writeToken) return null;
+  // Older sessions predate the backend field — default to the remote store.
+  const backend: StorageBackend = sessionStorage.getItem(SS_BACKEND) === "local" ? "local" : "redis";
   try {
     const key = await importAesKey(fromHex(keyHex));
-    return { blobId, key, writeToken };
+    return { blobId, key, writeToken, backend };
   } catch {
     clearSession();
     return null;
@@ -185,6 +200,32 @@ export function clearSession(): void {
   sessionStorage.removeItem(SS_ID);
   sessionStorage.removeItem(SS_KEY);
   sessionStorage.removeItem(SS_WRITE);
+  sessionStorage.removeItem(SS_BACKEND);
+}
+
+// --- Backend preference (localStorage: persists across tabs and sessions) ---
+//
+// A non-secret UI hint — which backend to preselect next time. Kept in
+// localStorage (not sessionStorage) so a freshly opened tab remembers the last
+// choice. Reveals nothing about the vault beyond the storage mode.
+
+const LS_BACKEND = "blinks.backend.pref";
+
+export function saveBackendPreference(backend: StorageBackend): void {
+  try {
+    localStorage.setItem(LS_BACKEND, backend);
+  } catch {
+    // storage unavailable (private mode / disabled) — preference is optional
+  }
+}
+
+export function loadBackendPreference(): StorageBackend | null {
+  try {
+    const value = localStorage.getItem(LS_BACKEND);
+    return value === "local" || value === "redis" ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 // --- Random password generator ---

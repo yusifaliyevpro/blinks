@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PasswordScreen } from "@/components/password-screen";
 
+type Backend = "redis" | "local";
 type Derived = { blobId: string; key: CryptoKey; writeToken: string; encKeyBytes: Uint8Array };
 
 const deriveVault = vi.hoisted(() => vi.fn<(password: string) => Promise<Derived>>());
@@ -9,11 +10,24 @@ const decryptVault = vi.hoisted(() =>
   vi.fn<(key: CryptoKey, ct: string) => Promise<{ title: string; links: unknown[] }>>(),
 );
 const generatePassword = vi.hoisted(() => vi.fn<(length?: number) => string>());
-const saveSession = vi.hoisted(() => vi.fn<(blobId: string, encKeyBytes: Uint8Array, writeToken: string) => void>());
-const getBlob = vi.hoisted(() => vi.fn<(id: string) => Promise<{ ciphertext: string; version: number } | null>>());
+const saveSession = vi.hoisted(() =>
+  vi.fn<(blobId: string, encKeyBytes: Uint8Array, writeToken: string, backend: Backend) => void>(),
+);
+const getBlob = vi.hoisted(() =>
+  vi.fn<(backend: Backend, id: string) => Promise<{ ciphertext: string; version: number } | null>>(),
+);
+const loadBackendPreference = vi.hoisted(() => vi.fn<() => Backend | null>());
+const saveBackendPreference = vi.hoisted(() => vi.fn<(backend: Backend) => void>());
 
-vi.mock("@/lib/crypto", () => ({ deriveVault, decryptVault, generatePassword, saveSession }));
-vi.mock("@/lib/actions", () => ({ getBlob }));
+vi.mock("@/lib/crypto", () => ({
+  deriveVault,
+  decryptVault,
+  generatePassword,
+  saveSession,
+  loadBackendPreference,
+  saveBackendPreference,
+}));
+vi.mock("@/lib/store", () => ({ getBlob }));
 
 const FAKE_VAULT: Derived = {
   blobId: "b".repeat(64),
@@ -29,13 +43,14 @@ const GOOD_PW = "password1";
 // Captured per-test so assertions reference a bound mock, not navigator's getter.
 let clipboardWrite: ReturnType<typeof vi.fn<(text: string) => Promise<void>>>;
 
-function renderScreen(onUnlock = vi.fn<(u: unknown) => void>()) {
-  render(<PasswordScreen onUnlock={onUnlock} />);
+function renderScreen(onUnlock = vi.fn<(u: unknown) => void>(), redisAvailable = true) {
+  render(<PasswordScreen redisAvailable={redisAvailable} onUnlock={onUnlock} />);
   return { onUnlock, input: screen.getByPlaceholderText("Password") };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  loadBackendPreference.mockReturnValue(null);
   deriveVault.mockResolvedValue(FAKE_VAULT);
   clipboardWrite = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", {
@@ -107,13 +122,18 @@ describe("PasswordScreen — unlock flow", () => {
       fireEvent.submit(input.closest("form")!);
     });
 
-    expect(saveSession).toHaveBeenCalledWith(FAKE_VAULT.blobId, FAKE_VAULT.encKeyBytes, FAKE_VAULT.writeToken);
+    expect(saveSession).toHaveBeenCalledWith(FAKE_VAULT.blobId, FAKE_VAULT.encKeyBytes, FAKE_VAULT.writeToken, "redis");
     expect(onUnlock).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "",
         links: [],
         version: 0,
-        session: { blobId: FAKE_VAULT.blobId, key: FAKE_VAULT.key, writeToken: FAKE_VAULT.writeToken },
+        session: {
+          blobId: FAKE_VAULT.blobId,
+          key: FAKE_VAULT.key,
+          writeToken: FAKE_VAULT.writeToken,
+          backend: "redis",
+        },
       }),
     );
     expect(decryptVault).not.toHaveBeenCalled();
@@ -160,5 +180,73 @@ describe("PasswordScreen — unlock flow", () => {
     expect(deriveVault).not.toHaveBeenCalled();
     expect(onUnlock).not.toHaveBeenCalled();
     expect(input).toHaveAttribute("aria-invalid", "true");
+  });
+});
+
+describe("PasswordScreen — backend selection", () => {
+  async function unlock(input: HTMLElement) {
+    getBlob.mockResolvedValue(null);
+    fireEvent.change(input, { target: { value: GOOD_PW } });
+    await act(async () => {
+      fireEvent.submit(input.closest("form")!);
+    });
+  }
+
+  it("shows the Redis/Local toggle when Redis is available", () => {
+    renderScreen(undefined, true);
+    expect(screen.getByRole("radiogroup", { name: /storage backend/i })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Redis" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Local" })).not.toBeChecked();
+  });
+
+  it("hides the toggle and defaults to local when Redis is unavailable", async () => {
+    const { input } = renderScreen(undefined, false);
+    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
+
+    await unlock(input);
+    expect(getBlob).toHaveBeenCalledWith("local", FAKE_VAULT.blobId);
+    expect(saveSession).toHaveBeenCalledWith(FAKE_VAULT.blobId, FAKE_VAULT.encKeyBytes, FAKE_VAULT.writeToken, "local");
+  });
+
+  it("routes the read and session to the chosen backend when Local is picked", async () => {
+    const onUnlock = vi.fn<(u: unknown) => void>();
+    const { input } = renderScreen(onUnlock, true);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Local" }));
+    expect(screen.getByRole("radio", { name: "Local" })).toBeChecked();
+
+    await unlock(input);
+
+    expect(getBlob).toHaveBeenCalledWith("local", FAKE_VAULT.blobId);
+    expect(saveSession).toHaveBeenCalledWith(FAKE_VAULT.blobId, FAKE_VAULT.encKeyBytes, FAKE_VAULT.writeToken, "local");
+    expect(onUnlock).toHaveBeenCalledWith(
+      expect.objectContaining({ session: expect.objectContaining({ backend: "local" }) }),
+    );
+  });
+
+  it("defaults to the redis backend when available", async () => {
+    const { input } = renderScreen(undefined, true);
+    await unlock(input);
+    expect(getBlob).toHaveBeenCalledWith("redis", FAKE_VAULT.blobId);
+  });
+
+  it("persists the selection when a backend is picked", () => {
+    renderScreen(undefined, true);
+    fireEvent.click(screen.getByRole("radio", { name: "Local" }));
+    expect(saveBackendPreference).toHaveBeenCalledWith("local");
+  });
+
+  it("preselects the remembered backend on mount", () => {
+    loadBackendPreference.mockReturnValue("local");
+    renderScreen(undefined, true);
+    expect(screen.getByRole("radio", { name: "Local" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Redis" })).not.toBeChecked();
+  });
+
+  it("ignores a remembered preference when Redis is unavailable", () => {
+    loadBackendPreference.mockReturnValue("redis");
+    renderScreen(undefined, false);
+    // No toggle at all — local is forced.
+    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
   });
 });

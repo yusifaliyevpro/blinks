@@ -7,7 +7,7 @@ import { blobLimiter, metadataLimiter } from "./ratelimit";
 import { redis } from "./redis";
 import { blobIdSchema, putBlobSchema, urlSchema } from "./schemas";
 import { PUT_BLOB_CAS, type CasResult } from "./scripts";
-import type { GetBlobResult, LinkMetadata, PutBlobResult } from "./types";
+import type { GetBlobResult, LinkMetadata, PutBlobInput, PutBlobResult } from "./types";
 
 // SECURITY (deployment assumption): rate limiting keys off the client IP taken
 // from these forwarded headers, most-trusted first. On Vercel, `x-vercel-forwarded-for`
@@ -32,13 +32,16 @@ async function clientIp(): Promise<string> {
   return "0.0.0.0";
 }
 
+// Null limiter (Redis not configured) means nothing to rate-limit against — skip.
 async function rateLimit(limiter: typeof blobLimiter): Promise<void> {
+  if (!limiter) return;
   const { success } = await limiter.limit(await clientIp());
   if (!success) throw new Error("Rate limit exceeded. Try again shortly.");
 }
 
 export async function getBlob(blobId: string): Promise<GetBlobResult> {
   const id = blobIdSchema.parse(blobId);
+  if (!redis) throw new Error("Remote storage is not configured.");
   await rateLimit(blobLimiter);
 
   const data = await redis.hgetall<{ c: string; v: number | string }>(blobKey(id));
@@ -46,13 +49,9 @@ export async function getBlob(blobId: string): Promise<GetBlobResult> {
   return { ciphertext: data.c, version: Number(data.v) };
 }
 
-export async function putBlob(input: {
-  blobId: string;
-  ciphertext: string;
-  expectedVersion: number;
-  writeToken: string;
-}): Promise<PutBlobResult> {
+export async function putBlob(input: PutBlobInput): Promise<PutBlobResult> {
   const { blobId, ciphertext, expectedVersion, writeToken } = putBlobSchema.parse(input);
+  if (!redis) throw new Error("Remote storage is not configured.");
   await rateLimit(blobLimiter);
 
   const result = await redis.eval(PUT_BLOB_CAS, [blobKey(blobId)], [ciphertext, expectedVersion, writeToken]);
