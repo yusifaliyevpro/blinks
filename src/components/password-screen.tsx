@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FiCheck, FiEye, FiEyeOff, FiRefreshCw } from "react-icons/fi";
+import { FiCheck, FiEye, FiEyeOff, FiGithub, FiRefreshCw } from "react-icons/fi";
 import { toast } from "sonner";
 import { decryptVault, deriveVault, generatePassword, saveSession, type Session } from "@/lib/crypto";
 import { allowPasswordManagers } from "@/lib/env.client";
@@ -114,6 +114,16 @@ export function PasswordScreen({
 
   return (
     <div className="flex min-h-dvh items-center justify-center p-6">
+      <a
+        href="https://github.com/yusifaliyevpro/blinks"
+        target="_blank"
+        rel="noreferrer noopener"
+        aria-label="View source on GitHub"
+        title="View source on GitHub"
+        className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none"
+      >
+        <FiGithub className="h-5 w-5" />
+      </a>
       <form onSubmit={submit} className="relative w-full max-w-sm">
         <div className="absolute inset-x-0 bottom-full mb-6 flex flex-col items-center justify-center gap-4">
           <Logo open={!show} className="h-14 w-auto text-text" />
