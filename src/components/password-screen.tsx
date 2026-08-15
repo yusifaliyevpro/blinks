@@ -41,6 +41,7 @@ export function PasswordScreen({
   function selectBackend(value: StorageBackend) {
     setBackend(value);
     saveBackendPreference(value);
+    inputRef.current?.focus();
   }
 
   async function submit(event: React.FormEvent) {
