@@ -222,7 +222,7 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
           }}
           onAnimationEnd={() => setInvalid(false)}
           aria-invalid={invalid}
-          className={`w-full rounded-xl border bg-panel py-3 pr-14 pl-4 text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 ${
+          className={`w-full rounded-xl border bg-panel py-3 pr-14 pl-4 text-text transition-colors outline-none placeholder:text-muted placeholder:select-none focus:border-accent/70 ${
             invalid ? "animate-shake border-red-500/70" : "border-border"
           }`}
         />

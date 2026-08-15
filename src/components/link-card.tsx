@@ -102,7 +102,7 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
               width={1200}
               height={630}
               onError={() => setImageOk(false)}
-              className="aspect-1200/630 w-40 shrink-0 rounded-lg border border-border/60 object-cover sm:w-52"
+              className="aspect-1200/630 w-40 shrink-0 rounded-lg border border-border/60 object-cover select-none sm:w-52"
             />
           )}
         </a>
