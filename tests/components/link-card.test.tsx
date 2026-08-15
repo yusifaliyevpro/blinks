@@ -117,3 +117,62 @@ describe("LinkCard — two-step delete", () => {
     expect(screen.getByRole("button", { name: /delete link/i })).toHaveAttribute("tabindex", "-1");
   });
 });
+
+function stubClipboard(writeText = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())) {
+  vi.stubGlobal("navigator", { clipboard: { writeText } });
+  return writeText;
+}
+
+describe("LinkCard — copy link", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("copies the raw URL without navigating", async () => {
+    const writeText = stubClipboard();
+    render(<LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /copy link/i }));
+    });
+    expect(writeText).toHaveBeenCalledExactlyOnceWith("https://www.example.com/article/");
+    // Copy must never delete.
+    expect(screen.getByRole("button", { name: /^delete link$/i })).toBeInTheDocument();
+  });
+
+  it("flashes a 'Copied' state then reverts after 1.5s", async () => {
+    stubClipboard();
+    render(<LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} />);
+
+    const copy = screen.getByRole("button", { name: /copy link/i });
+    expect(copy).toHaveAttribute("title", "Copy link");
+
+    await act(async () => {
+      fireEvent.click(copy);
+    });
+    expect(copy).toHaveAttribute("title", "Copied");
+
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(copy).toHaveAttribute("title", "Copy link");
+  });
+
+  it("keeps the copy button keyboard-reachable (unlike delete)", () => {
+    render(<LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} />);
+    expect(screen.getByRole("button", { name: /copy link/i })).not.toHaveAttribute("tabindex", "-1");
+  });
+
+  it("does nothing when the clipboard API is unavailable", () => {
+    vi.stubGlobal("navigator", { clipboard: undefined });
+    render(<LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} />);
+    // Should not throw.
+    fireEvent.click(screen.getByRole("button", { name: /copy link/i }));
+    expect(screen.getByRole("button", { name: /copy link/i })).toHaveAttribute("title", "Copy link");
+  });
+});
