@@ -27,6 +27,12 @@ vi.mock("@/lib/crypto", () => ({
   decryptVault: vi.fn<(key: CryptoKey, ct: string) => Promise<unknown>>(async (_key, ct) => JSON.parse(ct)),
 }));
 
+// Toasts are a global side effect — assert on the mock rather than the DOM.
+const toast = vi.hoisted(() =>
+  Object.assign(vi.fn<(message: string) => void>(), { error: vi.fn<(message: string) => void>() }),
+);
+vi.mock("sonner", () => ({ toast }));
+
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- inert placeholder key, only ever handed to mocked crypto
 const session = { blobId: "a".repeat(64), key: {} as CryptoKey, writeToken: "c".repeat(64), backend: "redis" as const };
 
@@ -199,15 +205,13 @@ describe("LinksView — optimistic concurrency", () => {
     expect(urls).toContain("https://server.com");
   });
 
-  it("surfaces an inline, dismissable error when every retry conflicts", async () => {
+  it("raises an error toast when every retry conflicts", async () => {
     putBlob.mockResolvedValue({ conflict: true, current: null });
     const { input } = renderView();
     await addLink(input, "https://loop.com");
 
-    const err = await screen.findByText(/could not save after several attempts/i);
-    expect(err).toBeInTheDocument();
-    // The whole banner is a dismiss button.
-    fireEvent.click(err.closest("button")!);
-    expect(screen.queryByText(/could not save after several attempts/i)).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/could not save after several attempts/i)),
+    );
   });
 });

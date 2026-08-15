@@ -19,15 +19,14 @@ const getBlob = vi.hoisted(() =>
 const loadBackendPreference = vi.hoisted(() => vi.fn<() => Backend | null>());
 const saveBackendPreference = vi.hoisted(() => vi.fn<(backend: Backend) => void>());
 
-vi.mock("@/lib/crypto", () => ({
-  deriveVault,
-  decryptVault,
-  generatePassword,
-  saveSession,
-  loadBackendPreference,
-  saveBackendPreference,
-}));
+const toast = vi.hoisted(() =>
+  Object.assign(vi.fn<(message: string) => void>(), { error: vi.fn<(message: string) => void>() }),
+);
+
+vi.mock("@/lib/crypto", () => ({ deriveVault, decryptVault, generatePassword, saveSession }));
+vi.mock("@/lib/preferences", () => ({ loadBackendPreference, saveBackendPreference }));
 vi.mock("@/lib/store", () => ({ getBlob }));
+vi.mock("sonner", () => ({ toast }));
 
 const FAKE_VAULT: Derived = {
   blobId: "b".repeat(64),
@@ -169,8 +168,10 @@ describe("PasswordScreen — unlock flow", () => {
     expect(saveSession).not.toHaveBeenCalled();
   });
 
-  it("rejects a too-short password without deriving or unlocking (min 8 chars)", async () => {
+  it("rejects a too-short password with a toast, not the browser bubble (min 8 chars)", async () => {
     const { onUnlock, input } = renderScreen();
+    // No native constraint validation — our handler owns the feedback.
+    expect(input).not.toHaveAttribute("minlength");
 
     fireEvent.change(input, { target: { value: "short" } });
     await act(async () => {
@@ -180,6 +181,7 @@ describe("PasswordScreen — unlock flow", () => {
     expect(deriveVault).not.toHaveBeenCalled();
     expect(onUnlock).not.toHaveBeenCalled();
     expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(toast.error).toHaveBeenCalledWith("Password must be at least 8 characters.");
   });
 });
 

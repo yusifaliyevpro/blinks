@@ -6,9 +6,7 @@ import {
   deriveVault,
   encryptJSON,
   generatePassword,
-  loadBackendPreference,
   loadSession,
-  saveBackendPreference,
   saveSession,
 } from "@/lib/crypto";
 import type { VaultData } from "@/lib/types";
@@ -24,7 +22,6 @@ let vaultB: Awaited<ReturnType<typeof deriveVault>>;
 
 beforeEach(() => {
   sessionStorage.clear();
-  localStorage.clear();
 });
 
 describe("deriveVault", () => {
@@ -203,30 +200,6 @@ describe("session persistence", () => {
     saveSession(vaultA.blobId, vaultA.encKeyBytes, vaultA.writeToken, "redis");
     sessionStorage.removeItem("blinks.writeToken");
     expect(await loadSession()).toBeNull();
-  });
-});
-
-describe("backend preference", () => {
-  it("returns null when no preference has been saved", () => {
-    expect(loadBackendPreference()).toBeNull();
-  });
-
-  it("round-trips a saved preference", () => {
-    saveBackendPreference("local");
-    expect(loadBackendPreference()).toBe("local");
-    saveBackendPreference("redis");
-    expect(loadBackendPreference()).toBe("redis");
-  });
-
-  it("ignores an unrecognized stored value", () => {
-    localStorage.setItem("blinks.backend.pref", "sqlite");
-    expect(loadBackendPreference()).toBeNull();
-  });
-
-  it("persists independently of the session (survives clearSession)", () => {
-    saveBackendPreference("local");
-    clearSession();
-    expect(loadBackendPreference()).toBe("local");
   });
 });
 
