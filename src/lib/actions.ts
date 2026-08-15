@@ -9,18 +9,13 @@ import { blobIdSchema, putBlobSchema, urlSchema } from "./schemas";
 import { PUT_BLOB_CAS, type CasResult } from "./scripts";
 import type { GetBlobResult, LinkMetadata, PutBlobInput, PutBlobResult } from "./types";
 
-// SECURITY (deployment assumption): rate limiting keys off the client IP taken
-// from these forwarded headers, most-trusted first. On Vercel, `x-vercel-forwarded-for`
-// is set by the platform and cannot be spoofed by the client, so it's authoritative.
-// If you FORK and deploy elsewhere, `x-forwarded-for`/`x-real-ip` are client-spoofable
-// unless your proxy overwrites them — meaning the per-IP rate limits can be trivially
-// bypassed. Make sure your edge/proxy sets a trustworthy client-IP header and put it
-// first in this list (or the limits are cosmetic).
+// SECURITY: Rate limiting keys off client IP from forwarded headers (most-trusted first).
+// On Vercel, `x-vercel-forwarded-for` is platform-set and unspoofable. Elsewhere,
+// `x-forwarded-for`/`x-real-ip` are spoofable unless your proxy overwrites them.
+// Put a trustworthy client-IP header first or limits are cosmetic.
 const IP_HEADERS = ["x-vercel-forwarded-for", "x-forwarded-for", "x-real-ip"] as const;
 
-// Namespace the blob under `blinks:*` (like the rate-limit keys) so the vault can
-// share a Redis DB with another project without colliding. Storage-only: the raw
-// blobId still comes from the client's HKDF output; this only prefixes the key.
+// Namespace the blob under `blinks:*` (like the rate-limit keys)
 const blobKey = (id: string): string => `blinks:blob:${id}`;
 
 async function clientIp(): Promise<string> {

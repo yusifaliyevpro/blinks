@@ -13,6 +13,10 @@
   --color-muted: #83838f;
   --color-accent: #6366f1;
 
+  /* Semantic status (not an accent) — the one red used for error feedback. */
+  --color-error: #ef4444;
+  --color-error-text: #fca5a5;
+
   --animate-shake: shake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
@@ -90,4 +94,24 @@ html::-webkit-scrollbar-thumb:hover {
 
 ::selection {
   background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+}
+
+/* Sonner toasts, themed to our tokens (dark only). Override the variables Sonner
+   reads rather than fighting its base styles; error toasts redefine them. */
+[data-sonner-toaster] {
+  --normal-bg: var(--color-elevated);
+  --normal-border: var(--color-border);
+  --normal-text: var(--color-text);
+  --border-radius: 0.75rem;
+  font-family: inherit;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type="error"] {
+  --normal-bg: color-mix(in oklab, var(--color-error) 12%, var(--color-elevated));
+  --normal-border: color-mix(in oklab, var(--color-error) 32%, var(--color-border));
+  --normal-text: var(--color-error-text);
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  color: var(--color-muted);
 }
