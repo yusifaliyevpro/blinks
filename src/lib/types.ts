@@ -3,7 +3,7 @@
 // touches the crypto — only the write destination changes.
 export type StorageBackend = "redis" | "local";
 
-export type EncryptedBlob = {
+type EncryptedBlob = {
   ciphertext: string;
   version: number;
 };

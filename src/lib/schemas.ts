@@ -22,5 +22,3 @@ export const putBlobSchema = z.object({
   expectedVersion: versionSchema,
   writeToken: writeTokenSchema,
 });
-
-export type PutBlobInput = z.infer<typeof putBlobSchema>;
