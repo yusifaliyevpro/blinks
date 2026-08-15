@@ -36,8 +36,8 @@ const FAKE_VAULT: Derived = {
   encKeyBytes: new Uint8Array(32),
 };
 
-// Passwords used to drive the unlock flow must clear the 8-char minimum.
-const GOOD_PW = "password1";
+// Passwords used to drive the unlock flow must clear the 12-char minimum.
+const GOOD_PW = "password1234";
 
 // Captured per-test so assertions reference a bound mock, not navigator's getter.
 let clipboardWrite: ReturnType<typeof vi.fn<(text: string) => Promise<void>>>;
@@ -168,7 +168,7 @@ describe("PasswordScreen — unlock flow", () => {
     expect(saveSession).not.toHaveBeenCalled();
   });
 
-  it("rejects a too-short password with a toast, not the browser bubble (min 8 chars)", async () => {
+  it("rejects a too-short password with a toast, not the browser bubble (min 12 chars)", async () => {
     const { onUnlock, input } = renderScreen();
     // No native constraint validation — our handler owns the feedback.
     expect(input).not.toHaveAttribute("minlength");
@@ -181,7 +181,7 @@ describe("PasswordScreen — unlock flow", () => {
     expect(deriveVault).not.toHaveBeenCalled();
     expect(onUnlock).not.toHaveBeenCalled();
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(toast.error).toHaveBeenCalledWith("Password must be at least 8 characters.");
+    expect(toast.error).toHaveBeenCalledWith("Password must be at least 12 characters.");
   });
 });
 

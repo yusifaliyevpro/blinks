@@ -10,7 +10,7 @@ import { getBlob } from "@/lib/store";
 import type { LinkItem, StorageBackend } from "@/lib/types";
 import { Logo } from "./logo";
 
-const MIN_PASSWORD = 8;
+const MIN_PASSWORD = 12;
 
 export type Unlocked = {
   session: Session;
@@ -46,7 +46,8 @@ export function PasswordScreen({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (busy) return;
-    // Minimum 8 chars — a weak password is the user's own risk, but reject the
+    // Minimum length — a weak password is the user's own risk, but this vault's
+    // master key is the only secret and is offline-crackable, so reject the
     // obviously-too-short ones (the generator produces 200). Shake + toast as
     // feedback (no native minLength, so the browser's own bubble never shows).
     if (!password || password.length < MIN_PASSWORD) {
