@@ -1,6 +1,7 @@
 import "@/lib/env.server";
 import type { Metadata } from "next";
 import { Instrument_Serif, Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 // Self-hosted at build time (no runtime external font request).
@@ -35,7 +36,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${instrumentSerif.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col font-sans">{children}</body>
+      <body className="flex min-h-full flex-col font-sans">
+        {children}
+        <Toaster theme="dark" position="bottom-right" />
+      </body>
     </html>
   );
 }

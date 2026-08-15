@@ -2,16 +2,10 @@
 
 import { useRef, useState } from "react";
 import { FiCheck, FiEye, FiEyeOff, FiRefreshCw } from "react-icons/fi";
-import {
-  decryptVault,
-  deriveVault,
-  generatePassword,
-  loadBackendPreference,
-  saveBackendPreference,
-  saveSession,
-  type Session,
-} from "@/lib/crypto";
+import { toast } from "sonner";
+import { decryptVault, deriveVault, generatePassword, saveSession, type Session } from "@/lib/crypto";
 import { allowPasswordManagers } from "@/lib/env.client";
+import { loadBackendPreference, saveBackendPreference } from "@/lib/preferences";
 import { getBlob } from "@/lib/store";
 import type { LinkItem, StorageBackend } from "@/lib/types";
 import { Logo } from "./logo";
@@ -51,10 +45,15 @@ export function PasswordScreen({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     // Minimum 8 chars — a weak password is the user's own risk, but reject the
-    // obviously-too-short ones (the generator produces 200). Shake as feedback.
-    if (!password || password.length < MIN_PASSWORD || busy) {
-      if (password.length > 0 && password.length < MIN_PASSWORD) setShake(true);
+    // obviously-too-short ones (the generator produces 200). Shake + toast as
+    // feedback (no native minLength, so the browser's own bubble never shows).
+    if (!password || password.length < MIN_PASSWORD) {
+      if (password.length > 0) {
+        setShake(true);
+        toast.error(`Password must be at least ${MIN_PASSWORD} characters.`);
+      }
       return;
     }
     setBusy(true);
@@ -127,7 +126,6 @@ export function PasswordScreen({
             autoFocus
             autoComplete={allowPasswordManagers ? "current-password" : "off"}
             spellCheck={false}
-            minLength={MIN_PASSWORD}
             disabled={busy}
             value={password}
             placeholder="Password"
@@ -177,12 +175,12 @@ export function PasswordScreen({
           <div
             role="radiogroup"
             aria-label="Storage backend"
-            className="absolute top-full left-1/2 mt-7 flex w-36 -translate-x-1/2 overflow-hidden rounded-lg border border-border bg-panel text-xs"
+            className="absolute top-full left-1/2 mt-7 flex w-36 -translate-x-1/2 rounded-lg border border-border bg-panel p-0.5 text-xs"
           >
-            {/* Neutral fill that slides under the active segment (CSS transform). */}
+            {/* Bordered chip that slides under the active segment (CSS transform). */}
             <span
               aria-hidden
-              className={`pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-elevated transition-transform duration-200 ease-out ${
+              className={`pointer-events-none absolute inset-y-0.5 left-0.5 w-[calc(50%-0.125rem)] rounded-md border border-border bg-elevated transition-transform duration-200 ease-out ${
                 backend === "local" ? "translate-x-full" : "translate-x-0"
               }`}
             />

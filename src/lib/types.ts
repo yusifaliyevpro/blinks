@@ -1,4 +1,4 @@
-// Where the encrypted blob lives. "redis" = the shared server-side store;
+// Where the encrypted blob lives. "redis" = the server-side store;
 // "local" = this browser's IndexedDB (offline, single-device). The choice never
 // touches the crypto — only the write destination changes.
 export type StorageBackend = "redis" | "local";

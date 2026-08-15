@@ -203,31 +203,6 @@ export function clearSession(): void {
   sessionStorage.removeItem(SS_BACKEND);
 }
 
-// --- Backend preference (localStorage: persists across tabs and sessions) ---
-//
-// A non-secret UI hint — which backend to preselect next time. Kept in
-// localStorage (not sessionStorage) so a freshly opened tab remembers the last
-// choice. Reveals nothing about the vault beyond the storage mode.
-
-const LS_BACKEND = "blinks.backend.pref";
-
-export function saveBackendPreference(backend: StorageBackend): void {
-  try {
-    localStorage.setItem(LS_BACKEND, backend);
-  } catch {
-    // storage unavailable (private mode / disabled) — preference is optional
-  }
-}
-
-export function loadBackendPreference(): StorageBackend | null {
-  try {
-    const value = localStorage.getItem(LS_BACKEND);
-    return value === "local" || value === "redis" ? value : null;
-  } catch {
-    return null;
-  }
-}
-
 // --- Random password generator ---
 
 const PASSWORD_CHARSET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}|;:,.<>?/~";

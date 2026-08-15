@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { FiDownload, FiUpload } from "react-icons/fi";
+import { toast } from "sonner";
 import * as z from "zod/mini";
 import type { LinkItem } from "@/lib/types";
 import { canonicalKey, isValidLink, normalizeUrl } from "@/lib/url-utils";
@@ -31,18 +32,17 @@ type VaultIOProps = {
   getLinks: () => LinkItem[];
   getTitle: () => string;
   onImport: (links: LinkItem[]) => void;
-  onError: (message: string) => void;
 };
 
 // Export / import controls: owns the file plumbing, JSON, validation and dedup.
-export function VaultIO({ getLinks, getTitle, onImport, onError }: VaultIOProps) {
+export function VaultIO({ getLinks, getTitle, onImport }: VaultIOProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Export links only (never the title) as JSON, with full cached metadata.
   function handleExport() {
     const links = getLinks();
     if (links.length === 0) {
-      onError("Nothing to export yet.");
+      toast("Nothing to export yet.");
       return;
     }
     const json = JSON.stringify(links, null, 2);
@@ -65,13 +65,13 @@ export function VaultIO({ getLinks, getTitle, onImport, onError }: VaultIOProps)
     try {
       raw = JSON.parse(await file.text());
     } catch {
-      onError("Import failed — the file isn't valid JSON.");
+      toast.error("Import failed — the file isn't valid JSON.");
       return;
     }
 
     const parsed = importSchema.safeParse(raw);
     if (!parsed.success) {
-      onError("Import failed — the file isn't a valid Blinks export.");
+      toast.error("Import failed — the file isn't a valid Blinks export.");
       return;
     }
 
@@ -96,7 +96,7 @@ export function VaultIO({ getLinks, getTitle, onImport, onError }: VaultIOProps)
     }
 
     if (toAdd.length === 0) {
-      onError("Nothing to import — every link is already saved.");
+      toast("Nothing to import — every link is already saved.");
       return;
     }
 

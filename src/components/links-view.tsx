@@ -3,6 +3,7 @@
 import { AnimatePresence } from "motion/react";
 import { startTransition, useEffect, useOptimistic, useRef, useState } from "react";
 import { FiCornerDownLeft, FiLogOut } from "react-icons/fi";
+import { toast } from "sonner";
 import { fetchMetadata } from "@/lib/actions";
 import { decryptVault, encryptJSON, type Session } from "@/lib/crypto";
 import { putBlob } from "@/lib/store";
@@ -32,7 +33,6 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
   const [optimistic, applyOptimistic] = useOptimistic<DisplayLink[], OptimisticAction>(links, reducer);
   const [input, setInput] = useState("");
   const [invalid, setInvalid] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [pulse, setPulse] = useState<{ id: string; n: number } | null>(null);
 
   const linksRef = useRef(links);
@@ -101,7 +101,7 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
     try {
       await commit((d) => ({ ...d, title: value }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save.");
+      toast.error(err instanceof Error ? err.message : "Failed to save.");
       throw err;
     }
   }
@@ -116,7 +116,6 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
     }
     setInput("");
     setInvalid(false);
-    setError(null);
 
     // Already saved? Don't add again — pulse the existing card instead.
     const key = canonicalKey(url);
@@ -157,7 +156,7 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
       try {
         await commit((d) => ({ ...d, links: [item, ...d.links] }));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to save.");
+        toast.error(err instanceof Error ? err.message : "Failed to save.");
       }
     });
   }
@@ -166,7 +165,6 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
   // reverse to match the prepended commit order; placeholders get a distinct
   // `pending-` id so they can't collide with the committed items mid-transition.
   function handleImport(newLinks: LinkItem[]) {
-    setError(null);
     startTransition(async () => {
       for (let i = newLinks.length - 1; i >= 0; i--) {
         applyOptimistic({ type: "add", item: { ...newLinks[i], id: `pending-${newLinks[i].id}` } });
@@ -174,31 +172,25 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
       try {
         await commit((d) => ({ ...d, links: [...newLinks, ...d.links] }));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to import.");
+        toast.error(err instanceof Error ? err.message : "Failed to import.");
       }
     });
   }
 
   function handleDelete(id: string) {
-    setError(null);
     startTransition(async () => {
       applyOptimistic({ type: "remove", id });
       try {
         await commit((d) => ({ ...d, links: d.links.filter((l) => l.id !== id) }));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to delete.");
+        toast.error(err instanceof Error ? err.message : "Failed to delete.");
       }
     });
   }
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-16 sm:pt-3 sm:pb-20">
-      <VaultIO
-        getLinks={() => linksRef.current}
-        getTitle={() => titleRef.current}
-        onImport={handleImport}
-        onError={setError}
-      />
+      <VaultIO getLinks={() => linksRef.current} getTitle={() => titleRef.current} onImport={handleImport} />
 
       <button
         type="button"
@@ -246,16 +238,6 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
           <FiCornerDownLeft className="h-4 w-4" />
         </button>
       </form>
-
-      {error && (
-        <button
-          type="button"
-          onClick={() => setError(null)}
-          className="mt-3 w-full rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-left text-sm text-red-300"
-        >
-          {error} <span className="text-red-300/60">(dismiss)</span>
-        </button>
-      )}
 
       {optimistic.length === 0 ? (
         <p className="mt-16 text-center text-sm text-muted">Nothing saved yet.</p>
