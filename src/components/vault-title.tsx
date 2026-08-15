@@ -23,10 +23,14 @@ export function VaultTitle({ initialTitle, onSave }: VaultTitleProps) {
   useEffect(() => {
     const t = title.trim();
     document.title = t ? `${t} | Blinks` : "Blinks";
+  }, [title]);
+
+  // Reset only on unmount — not on every keystroke.
+  useEffect(() => {
     return () => {
       document.title = "Blinks";
     };
-  }, [title]);
+  }, []);
 
   useEffect(() => {
     return () => {

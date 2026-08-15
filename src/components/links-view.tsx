@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, domAnimation, LazyMotion } from "motion/react";
 import { startTransition, useEffect, useOptimistic, useRef, useState } from "react";
 import { FiCornerDownLeft, FiLogOut } from "react-icons/fi";
 import { toast } from "sonner";
@@ -242,19 +242,21 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
       {optimistic.length === 0 ? (
         <p className="mt-16 text-center text-sm text-muted">Nothing saved yet.</p>
       ) : (
-        <ul className="mt-6 space-y-2">
-          <AnimatePresence initial={false} mode="popLayout">
-            {optimistic.map((link, index) => (
-              <LinkCard
-                key={link.id}
-                link={link}
-                index={index}
-                onDelete={handleDelete}
-                pulse={pulse && pulse.id === link.id ? pulse.n : 0}
-              />
-            ))}
-          </AnimatePresence>
-        </ul>
+        <LazyMotion features={domAnimation}>
+          <ul className="mt-6 space-y-2">
+            <AnimatePresence initial={false} mode="popLayout">
+              {optimistic.map((link, index) => (
+                <LinkCard
+                  key={link.id}
+                  link={link}
+                  index={index}
+                  onDelete={handleDelete}
+                  pulse={pulse && pulse.id === link.id ? pulse.n : 0}
+                />
+              ))}
+            </AnimatePresence>
+          </ul>
+        </LazyMotion>
       )}
     </div>
   );

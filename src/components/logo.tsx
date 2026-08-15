@@ -7,20 +7,49 @@ export function Logo({ open = true, className }: { open?: boolean; className?: s
   const pupilRef = useRef<SVGGElement>(null);
 
   useEffect(() => {
-    function onMove(e: MouseEvent) {
+    // Cache the eye's center so we don't force a layout (getBoundingClientRect)
+    // on every mousemove; refresh it on resize/scroll instead.
+    let cx = 0;
+    let cy = 0;
+    function measure() {
       const svg = svgRef.current;
-      const pupil = pupilRef.current;
-      if (!svg || !pupil) return;
+      if (!svg) return;
       const rect = svg.getBoundingClientRect();
-      const dx = e.clientX - (rect.left + rect.width / 2);
-      const dy = e.clientY - (rect.top + rect.height / 2);
+      cx = rect.left + rect.width / 2;
+      cy = rect.top + rect.height / 2;
+    }
+    measure();
+
+    // Coalesce bursts of mousemove events into one style write per frame.
+    let frame = 0;
+    let lastX = 0;
+    let lastY = 0;
+    function apply() {
+      frame = 0;
+      const pupil = pupilRef.current;
+      if (!pupil) return;
+      const dx = lastX - cx;
+      const dy = lastY - cy;
       const angle = Math.atan2(dy, dx);
       const strength = Math.min(Math.hypot(dx, dy) / 60, 1);
       const max = 2.3; // pupil travel in viewBox units
       pupil.style.transform = `translate(${Math.cos(angle) * max * strength}px, ${Math.sin(angle) * max * strength}px)`;
     }
+    function onMove(e: MouseEvent) {
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (!frame) frame = requestAnimationFrame(apply);
+    }
+
     window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (
