@@ -69,7 +69,7 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="flex items-stretch gap-2"
+        className="group/row flex items-stretch"
       >
         <a
           ref={cardRef}
@@ -107,6 +107,9 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
           )}
         </a>
 
+        {/* Hidden (zero width) until the row is hovered/focused; then it slides
+            open and the card's right edge glides left to make room. Kept visible
+            on coarse pointers (touch), which have no hover. */}
         <button
           type="button"
           // Never keyboard-reachable, so a stray double keypress can't delete.
@@ -115,10 +118,10 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
           onClick={handleDeleteClick}
           aria-label={confirming ? "Confirm delete" : "Delete link"}
           title={confirming ? "Click again to delete" : "Delete link"}
-          className={`flex shrink-0 items-center justify-center rounded-xl border px-3 transition-colors ${
+          className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl border transition-all duration-200 ease-out ${
             confirming
-              ? "border-red-500/50 bg-red-500/10 text-red-400"
-              : "border-border bg-panel text-muted hover:border-red-500/40 hover:bg-hover hover:text-red-400"
+              ? "ml-2 w-12 border-red-500/50 bg-red-500/10 text-red-400 opacity-100"
+              : "ml-0 w-0 border-border bg-panel text-muted opacity-0 group-focus-within/row:ml-2 group-focus-within/row:w-12 group-focus-within/row:opacity-100 group-hover/row:ml-2 group-hover/row:w-12 group-hover/row:opacity-100 hover:border-red-500/40 hover:bg-hover hover:text-red-400 pointer-coarse:ml-2 pointer-coarse:w-12 pointer-coarse:opacity-100"
           }`}
         >
           {confirming ? <FiCheck className="h-4 w-4" /> : <FiTrash2 className="h-4 w-4" />}
