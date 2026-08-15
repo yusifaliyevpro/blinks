@@ -139,8 +139,9 @@ look like generic AI slop.** Concretely:
   **Sonner** (`<Toaster theme="dark" position="bottom-right" />` in `layout.tsx`)
   handles transient notices — save/import/delete failures and neutral notices
   ("nothing to export") — replacing the old inline error banner. Toasts are themed
-  to our tokens by overriding Sonner's CSS variables in `globals.css` (`--normal-bg`
-  etc.; error toasts use the `--color-error` status tokens). Still no modals.
+  to match the inputs (the `panel` surface + `border`) by overriding Sonner's dark
+  CSS variables in `globals.css` (`--normal-bg` etc., at `body …` specificity to
+  beat Sonner's own dark rule); every toast type shares one look. Still no modals.
 - **Micro-interactions:** icon buttons sit _inside_ inputs (trailing); they use
   `onMouseDown` `preventDefault` so clicking them never steals focus from the input.
   Custom scrollbar is thin, themed, `scrollbar-gutter: stable`, no arrow buttons.
