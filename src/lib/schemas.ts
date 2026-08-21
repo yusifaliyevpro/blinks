@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 // blobId is 32 bytes, hex-encoded → 64 lowercase hex chars.
 export const blobIdSchema = z.string().regex(/^[0-9a-f]{64}$/);

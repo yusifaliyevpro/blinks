@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 export const clientEnvSchema = z.object({
   // Fixed, non-secret KDF salt. Referenced explicitly (not spread) so Next

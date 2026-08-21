@@ -42,17 +42,17 @@
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
-    "@vitejs/plugin-react": "6.0.5",
+    "@vitejs/plugin-react": "6.1.0",
     "fake-indexeddb": "6.2.5",
     "greenly": "1.1.5",
-    "happy-dom": "20.11.2",
-    "oxfmt": "0.63.0",
-    "oxlint": "1.78.0",
+    "happy-dom": "20.11.6",
+    "oxfmt": "0.64.0",
+    "oxlint": "1.79.0",
     "oxlint-tsgolint": "7.0.2001",
     "postcss-load-config": "6.0.1",
     "react-doctor": "0.9.12",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   }
 }
