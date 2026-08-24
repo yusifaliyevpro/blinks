@@ -44,7 +44,7 @@
     "@types/react-dom": "19.2.4",
     "@vitejs/plugin-react": "6.1.0",
     "fake-indexeddb": "6.2.5",
-    "greenly": "1.1.5",
+    "greenly": "1.1.6",
     "happy-dom": "20.11.6",
     "oxfmt": "0.64.0",
     "oxlint": "1.79.0",
