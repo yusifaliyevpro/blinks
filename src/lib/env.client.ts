@@ -1,11 +1,11 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 
 export const clientEnvSchema = z.object({
   // Fixed, non-secret KDF salt. Referenced explicitly (not spread) so Next
   // inlines it into the client bundle.
-  NEXT_PUBLIC_KDF_SALT: z.string().min(16),
+  NEXT_PUBLIC_KDF_SALT: z.string().check(z.minLength(16)),
   // "true" re-enables password managers on the password field (off by default).
-  NEXT_PUBLIC_ALLOW_PASSWORD_MANAGERS: z.string().optional(),
+  NEXT_PUBLIC_ALLOW_PASSWORD_MANAGERS: z.optional(z.string()),
 });
 
 export const clientEnv = clientEnvSchema.parse({
