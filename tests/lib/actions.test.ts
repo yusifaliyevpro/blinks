@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ZodError } from "zod";
+import * as z from "zod/mini";
+
+const ZodError = z.core.$ZodError;
 
 // Mock every server-only dependency so the actions run in isolation: no real
 // Redis, no rate-limiter, no request headers, no network fetch.

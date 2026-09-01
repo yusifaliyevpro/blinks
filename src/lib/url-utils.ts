@@ -16,7 +16,7 @@ export function normalizeUrl(input: string): string {
 // `href`. Enforcing the scheme here means safety no longer depends solely on
 // normalizeUrl prepending https:// upstream.
 export function isValidLink(url: string): boolean {
-  if (!urlSchema.safeParse(url).success) return false;
+  if (!z.validate(urlSchema, url)) return false;
   try {
     const u = new URL(url);
     return (u.protocol === "https:" || u.protocol === "http:") && u.hostname.includes(".");
