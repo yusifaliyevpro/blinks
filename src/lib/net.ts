@@ -33,9 +33,8 @@ function hextetsToV4(hi: number, lo: number): string {
   return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
 }
 
-// Expand an IPv6 string (with optional `::` compression and a trailing embedded
-// IPv4) into exactly eight 16-bit groups, so range checks are numeric and exact
-// instead of prefix-string guesses. Returns null on anything malformed.
+// Expand an IPv6 string (optional `::`, optional trailing embedded IPv4) into eight
+// 16-bit groups so range checks are numeric and exact. Returns null if malformed.
 function expandV6(ip: string): number[] | null {
   let s = ip.toLowerCase().trim();
   const zone = s.indexOf("%");

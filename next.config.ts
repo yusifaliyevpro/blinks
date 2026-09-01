@@ -1,13 +1,10 @@
 import type { NextConfig } from "next";
 
-// Static CSP so it holds under static prerendering (a per-request nonce would
-// mismatch the build-time HTML and get every script blocked in production).
-// Third-party/external script origins are fully blocked — only same-origin
-// scripts run. `'unsafe-inline'` is required for Next's inline bootstrap; it's
-// not a practical risk here since the app renders no user-supplied HTML (React
-// escapes everything, no dangerouslySetInnerHTML, no eval of link data).
-// `'wasm-unsafe-eval'` lets the Argon2id WASM (hash-wasm) compile without
-// opening general JS eval. `'unsafe-eval'` is dev-only (React Fast Refresh).
+// Static CSP (a per-request nonce would mismatch the prerendered HTML and block
+// every script in production). External script origins are fully blocked.
+// `'unsafe-inline'` is needed for Next's inline bootstrap and is low risk here (no
+// user-supplied HTML: React escapes everything, no dangerouslySetInnerHTML/eval).
+// `'wasm-unsafe-eval'` lets the Argon2id WASM compile; `'unsafe-eval'` is dev-only.
 const isDev = process.env.NODE_ENV !== "production";
 
 const csp = [

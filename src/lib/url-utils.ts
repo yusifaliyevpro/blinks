@@ -8,13 +8,10 @@ export function normalizeUrl(input: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-// Accept a real link only: an http(s) URL with a dotted hostname (has a TLD), so
-// bare words like "hello" — which normalize into a technically-valid
-// https://hello — are rejected. The explicit protocol check is a hard XSS guard:
-// `z.url()` accepts `javascript:`/`data:`/`vbscript:` (and a `javascript://a.b`
-// form even has a dotted host), and this url is later rendered as an anchor
-// `href`. Enforcing the scheme here means safety no longer depends solely on
-// normalizeUrl prepending https:// upstream.
+// Accept only an http(s) URL with a dotted host, so bare words (which normalize to
+// https://hello) are rejected. The explicit scheme check is a hard XSS guard:
+// `z.url()` accepts `javascript:`/`data:`/`vbscript:` (even a dotted-host
+// `javascript://a.b`), and this url is later rendered as an anchor `href`.
 export function isValidLink(url: string): boolean {
   if (!z.validate(urlSchema, url)) return false;
   try {

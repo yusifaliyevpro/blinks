@@ -1,16 +1,10 @@
-// Atomic compare-and-set for the encrypted blob. Upstash REST is stateless (no
-// WATCH/MULTI), so this script is the atomic unit: write only if the stored
-// version still matches `expected`, so two tabs can't clobber each other.
+// Atomic compare-and-set for the encrypted blob (Upstash REST has no WATCH/MULTI,
+// so this Lua script is the atomic unit): overwrite only if `v` still matches
+// `expected` and the presented write token matches the stored `t`. A new blob
+// adopts the presented token on first write, so a leaked blobId (a bearer read id)
+// can't clobber the vault and two tabs can't race. `t` is never returned.
 //
-// Write authorization: the blob stores a `t` (write token) derived from the
-// password. An existing blob may only be overwritten by a request presenting the
-// matching token, so knowing the blobId alone (a bearer id, sent on every read)
-// is not enough to corrupt or wipe the vault. The token is never returned to
-// clients. A brand-new blob (no stored `t`) adopts the presented token on first
-// write, which also transparently upgrades pre-existing token-less blobs.
-//
-// Blob = Redis hash with fields `c` (ciphertext), `v` (version), `t` (writeToken).
-// Returns:
+// Blob = Redis hash: `c` (ciphertext), `v` (version), `t` (writeToken). Returns:
 //   success      -> ["ok", newVersion]
 //   conflict     -> ["conflict", currentVersion, currentCiphertext | null]
 //   unauthorized -> ["unauthorized"]

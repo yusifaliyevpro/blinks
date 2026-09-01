@@ -6,8 +6,8 @@
 //
 // One Argon2id pass, three HKDF-SHA256 outputs (distinct `info` labels). A wrong
 // password yields a wrong blobId (Redis miss) or fails AES-GCM auth. `writeToken`
-// is an independent secret (can't decrypt anything) that proves password
-// possession to the server so a leaked blobId alone can't overwrite the vault.
+// is an independent secret (can't decrypt anything) proving password possession,
+// so a leaked blobId alone can't overwrite the vault.
 
 import { argon2id } from "hash-wasm";
 import { clientEnv } from "./env.client";

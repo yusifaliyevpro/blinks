@@ -161,9 +161,9 @@ export function LinksView({ session, initialTitle, initialLinks, initialVersion,
     });
   }
 
-  // Add the validated, de-duped links from VaultIO. Optimistically shown in
-  // reverse to match the prepended commit order; placeholders get a distinct
-  // `pending-` id so they can't collide with the committed items mid-transition.
+  // Add the validated, de-duped links from VaultIO. Shown in reverse to match the
+  // prepended commit order; placeholders get a `pending-` id so they can't collide
+  // with committed items mid-transition.
   function handleImport(newLinks: LinkItem[]) {
     startTransition(async () => {
       for (let i = newLinks.length - 1; i >= 0; i--) {

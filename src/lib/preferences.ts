@@ -1,6 +1,5 @@
-// Non-secret UI preferences, persisted in localStorage so they survive across
-// tabs and sessions. Nothing here reveals anything about the vault contents —
-// only how the app is configured. Add future preferences alongside these.
+// Non-secret UI preferences in localStorage (survive across tabs and sessions).
+// Only app configuration, nothing about the vault contents.
 
 import type { StorageBackend } from "./types";
 

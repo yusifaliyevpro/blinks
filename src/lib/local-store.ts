@@ -67,9 +67,9 @@ export async function localPutBlob(input: PutBlobInput): Promise<PutBlobResult> 
       const cur = getReq.result as StoredBlob | undefined;
       const current = cur?.v ?? 0;
 
-      // Parity with the Redis CAS: an existing blob is bound to the write token
-      // from its first write. The same password derives the same token, so this
-      // never trips in normal use — it just keeps both backends identical.
+      // Parity with the Redis CAS: an existing blob is bound to the write token from
+      // its first write. The same password derives the same token, so this never
+      // trips in normal use; it just keeps both backends identical.
       if (cur?.t && cur.t !== input.writeToken) {
         failure = new Error("Not authorized to write this vault.");
         tx.abort();

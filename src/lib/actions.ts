@@ -9,10 +9,9 @@ import { blobIdSchema, putBlobSchema, urlSchema } from "./schemas";
 import { PUT_BLOB_CAS, type CasResult } from "./scripts";
 import type { GetBlobResult, LinkMetadata, PutBlobInput, PutBlobResult } from "./types";
 
-// SECURITY: Rate limiting keys off client IP from forwarded headers (most-trusted first).
-// On Vercel, `x-vercel-forwarded-for` is platform-set and unspoofable. Elsewhere,
+// SECURITY: rate limiting keys off client IP from forwarded headers (most-trusted
+// first). `x-vercel-forwarded-for` is platform-set/unspoofable on Vercel; elsewhere
 // `x-forwarded-for`/`x-real-ip` are spoofable unless your proxy overwrites them.
-// Put a trustworthy client-IP header first or limits are cosmetic.
 const IP_HEADERS = ["x-vercel-forwarded-for", "x-forwarded-for", "x-real-ip"] as const;
 
 // Namespace the blob under `blinks:*` (like the rate-limit keys)
@@ -87,10 +86,9 @@ export async function fetchMetadata(url: string): Promise<LinkMetadata> {
   await rateLimit(metadataLimiter);
 
   try {
-    // resolveDNSHost is the SSRF gate — rejects private/loopback hosts before fetch.
-    // followRedirects: "manual" + handleRedirects makes link-preview-js re-run the
-    // gate on every redirect hop (its "follow" path skips re-validation, so an http
-    // target could 302 into the private network / cloud metadata — SSRF bypass).
+    // resolveDNSHost is the SSRF gate (rejects private/loopback hosts before fetch).
+    // followRedirects "manual" + handleRedirects re-runs the gate on every hop; the
+    // "follow" path skips re-validation, so an http 302 could reach the private net.
     const preview = await getLinkPreview(clean, {
       timeout: 5_000,
       followRedirects: "manual",

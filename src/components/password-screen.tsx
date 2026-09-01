@@ -47,10 +47,9 @@ export function PasswordScreen({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (busy) return;
-    // Minimum length — a weak password is the user's own risk, but this vault's
-    // master key is the only secret and is offline-crackable, so reject the
-    // obviously-too-short ones (the generator produces 200). Shake + toast as
-    // feedback (no native minLength, so the browser's own bubble never shows).
+    // Minimum length: this vault's master key is the only secret and is offline-
+    // crackable, so reject obviously-too-short passwords (the generator makes 200).
+    // Shake + toast as feedback (no native minLength, so no browser bubble shows).
     if (!password || password.length < MIN_PASSWORD) {
       if (password.length > 0) {
         setShake(true);
