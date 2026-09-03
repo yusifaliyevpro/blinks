@@ -169,6 +169,62 @@ describe("LinksView — deleting", () => {
   });
 });
 
+describe("LinksView — importing", () => {
+  it("imports links from a file (via VaultIO) and commits them", async () => {
+    renderView();
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const file = new File([JSON.stringify([{ url: "https://imported.com" }])], "x.json", {
+      type: "application/json",
+    });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => expect(putBlob).toHaveBeenCalled());
+    // Import uses the metadata from the file, never re-fetches.
+    expect(fetchMetadata).not.toHaveBeenCalled();
+    expect(lastCommitted().links.map((l: LinkItem) => l.url)).toContain("https://imported.com");
+  });
+
+  it("merges imported links on top of the existing ones", async () => {
+    renderView({ initialLinks: [link({ id: "1", url: "https://old.com", title: "Old" })] });
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const file = new File([JSON.stringify([{ url: "https://added.com" }])], "x.json", {
+      type: "application/json",
+    });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => expect(putBlob).toHaveBeenCalled());
+    const urls = lastCommitted().links.map((l: LinkItem) => l.url);
+    expect(urls).toContain("https://old.com");
+    expect(urls).toContain("https://added.com");
+  });
+});
+
+describe("LinksView — Enter-to-refocus", () => {
+  it("focuses the link input when Enter is pressed with nothing interactive focused", () => {
+    const { input } = renderView();
+    input.blur();
+    expect(input).not.toHaveFocus();
+
+    fireEvent.keyDown(document.body, { key: "Enter" });
+    expect(input).toHaveFocus();
+  });
+
+  it("does not steal focus when a button is focused", () => {
+    const { input } = renderView();
+    const logout = screen.getByRole("button", { name: /log out/i });
+    logout.focus();
+
+    fireEvent.keyDown(logout, { key: "Enter" });
+    expect(input).not.toHaveFocus();
+  });
+});
+
 describe("LinksView — logout", () => {
   it("invokes onLogout when the log-out button is clicked", () => {
     const { onLogout } = renderView();

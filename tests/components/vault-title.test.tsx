@@ -89,7 +89,7 @@ describe("VaultTitle", () => {
     expect(check).toHaveClass("opacity-100");
   });
 
-  it("truncates to the 80-char maximum before saving", async () => {
+  it("truncates to the 30-char maximum before saving", async () => {
     const { onSave, input } = setup();
     type(input, "x".repeat(90));
     await act(async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hostOf, isValidLink, normalizeUrl, prettyUrl } from "@/lib/url-utils";
+import { canonicalKey, hostOf, isValidLink, normalizeUrl, prettyUrl } from "@/lib/url-utils";
 
 // Security guard: a saved link's `url` is rendered as an anchor `href`
 // (link-card.tsx). If a `javascript:`/`data:`/`vbscript:`/`file:` URL could
@@ -45,6 +45,37 @@ describe("dangerous URL schemes never validate (href XSS guard)", () => {
       expect(isValidLink(input)).toBe(false);
     });
   }
+});
+
+// canonicalKey is the dedup key: two links are "the same" iff their keys match.
+// It lowercases the host, drops a trailing slash from the path, but keeps the
+// query string. Cosmetic-only differences must collapse; meaningful ones must not.
+describe("canonicalKey", () => {
+  it("ignores host case and a lone trailing slash", () => {
+    expect(canonicalKey("https://Example.COM/")).toBe(canonicalKey("https://example.com"));
+  });
+
+  it("treats a trailing slash on the path as identical", () => {
+    expect(canonicalKey("https://example.com/foo/bar/")).toBe(canonicalKey("https://example.com/foo/bar"));
+  });
+
+  it("preserves the query string (different queries are different links)", () => {
+    expect(canonicalKey("https://example.com/s?q=1")).not.toBe(canonicalKey("https://example.com/s?q=2"));
+    expect(canonicalKey("https://example.com/s?q=hello")).toBe("https://example.com/s?q=hello");
+  });
+
+  it("keeps the port and does not lowercase the path", () => {
+    expect(canonicalKey("https://example.com:8443/A/B")).toBe("https://example.com:8443/A/B");
+  });
+
+  it("distinguishes different protocols and hosts", () => {
+    expect(canonicalKey("http://example.com/x")).not.toBe(canonicalKey("https://example.com/x"));
+    expect(canonicalKey("https://a.example.com/x")).not.toBe(canonicalKey("https://b.example.com/x"));
+  });
+
+  it("falls back to a trimmed, lowercased raw string for non-URL input", () => {
+    expect(canonicalKey("  Not A Url  ")).toBe("not a url");
+  });
 });
 
 describe("hostOf", () => {

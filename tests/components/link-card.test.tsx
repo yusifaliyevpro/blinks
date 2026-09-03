@@ -118,6 +118,44 @@ describe("LinkCard — two-step delete", () => {
   });
 });
 
+describe("LinkCard — pulse (re-paste highlight)", () => {
+  let scrollIntoView: ReturnType<typeof vi.fn<() => void>>;
+  beforeEach(() => {
+    // happy-dom has no layout, so scrollIntoView isn't implemented — stub it.
+    scrollIntoView = vi.fn<() => void>();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+
+  it("does nothing when pulse is 0", () => {
+    render(<LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} pulse={0} />);
+    expect(screen.getByRole("link")).not.toHaveClass("pulse-highlight");
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("flashes the card and scrolls it into view when pulsed", () => {
+    const { rerender } = render(
+      <LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} pulse={0} />,
+    );
+    rerender(<LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} pulse={1} />);
+
+    expect(screen.getByRole("link")).toHaveClass("pulse-highlight");
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("restarts the animation on a repeated pulse (new nonce)", () => {
+    const { rerender } = render(
+      <LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} pulse={1} />,
+    );
+    const anchor = screen.getByRole("link");
+    // The class clears when the animation finishes...
+    fireEvent.animationEnd(anchor);
+    expect(anchor).not.toHaveClass("pulse-highlight");
+    // ...and a fresh pulse nonce re-applies it.
+    rerender(<LinkCard link={makeLink()} index={0} onDelete={vi.fn<(id: string) => void>()} pulse={2} />);
+    expect(anchor).toHaveClass("pulse-highlight");
+  });
+});
+
 function stubClipboard(writeText = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve())) {
   vi.stubGlobal("navigator", { clipboard: { writeText } });
   return writeText;

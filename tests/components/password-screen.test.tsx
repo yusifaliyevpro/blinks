@@ -167,6 +167,32 @@ describe("PasswordScreen — unlock flow", () => {
     expect(saveSession).not.toHaveBeenCalled();
   });
 
+  it("ignores a second submit while a derive is in flight and disables the controls", async () => {
+    // Hold deriveVault pending so the form stays busy between the two submits.
+    let release!: (v: Derived) => void;
+    deriveVault.mockReturnValue(new Promise<Derived>((r) => (release = r)));
+    getBlob.mockResolvedValue(null);
+    const { input } = renderScreen();
+
+    fireEvent.change(input, { target: { value: GOOD_PW } });
+    await act(async () => {
+      fireEvent.submit(input.closest("form")!);
+    });
+
+    // Busy now: the field and generate button are disabled, and a repeat submit is a no-op.
+    expect(input).toBeDisabled();
+    expect(screen.getByRole("button", { name: /generate a strong random password/i })).toBeDisabled();
+    await act(async () => {
+      fireEvent.submit(input.closest("form")!);
+    });
+    expect(deriveVault).toHaveBeenCalledTimes(1);
+
+    // Let the in-flight unlock finish so nothing dangles.
+    await act(async () => {
+      release(FAKE_VAULT);
+    });
+  });
+
   it("rejects a too-short password with a toast, not the browser bubble (min 12 chars)", async () => {
     const { onUnlock, input } = renderScreen();
     // No native constraint validation — our handler owns the feedback.
