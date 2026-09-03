@@ -69,7 +69,6 @@ async function addLink(input: HTMLElement, url: string) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   fetchMetadata.mockResolvedValue({ title: "Fetched Title", description: "Fetched desc", image: "" });
   putBlob.mockResolvedValue({ version: 1 });
 });

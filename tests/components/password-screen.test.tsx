@@ -48,7 +48,6 @@ function renderScreen(onUnlock = vi.fn<(u: unknown) => void>(), redisAvailable =
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   loadBackendPreference.mockReturnValue(null);
   deriveVault.mockResolvedValue(FAKE_VAULT);
   clipboardWrite = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);

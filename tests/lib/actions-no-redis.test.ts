@@ -19,7 +19,6 @@ const VALID_ID = "a".repeat(64);
 const VALID_PUT = { blobId: VALID_ID, ciphertext: "A".repeat(40), expectedVersion: 0, writeToken: "b".repeat(64) };
 
 beforeEach(() => {
-  vi.clearAllMocks();
   headersGet.mockReturnValue(null);
 });
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { GetBlobResult, PutBlobInput, PutBlobResult } from "@/lib/types";
 
 type GetFn = (id: string) => Promise<GetBlobResult>;
@@ -18,10 +18,6 @@ const { getBlob, putBlob } = await import("@/lib/store");
 
 const ID = "a".repeat(64);
 const INPUT: PutBlobInput = { blobId: ID, ciphertext: "cipher", expectedVersion: 2, writeToken: "c".repeat(64) };
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("getBlob routing", () => {
   it("uses the remote action for the redis backend", async () => {

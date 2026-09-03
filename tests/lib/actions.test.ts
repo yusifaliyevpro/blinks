@@ -30,7 +30,6 @@ const { getBlob, putBlob, fetchMetadata } = await import("@/lib/actions");
 const VALID_ID = "a".repeat(64);
 
 beforeEach(() => {
-  vi.clearAllMocks();
   // Default: within limits, no IP header present.
   blobLimit.mockResolvedValue({ success: true });
   metaLimit.mockResolvedValue({ success: true });

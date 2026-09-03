@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { VaultApp } from "@/components/vault-app";
 
 type Backend = "redis" | "local";
@@ -54,10 +54,6 @@ const fakeSession: Session = {
   writeToken: "c".repeat(64),
   backend: "redis",
 };
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("VaultApp — phase machine", () => {
   it("falls back to the locked screen when there is no stored session", async () => {
