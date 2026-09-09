@@ -18,6 +18,7 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_KDF_SALT: TEST_KDF_SALT,
     },
+    fsModuleCache: true,
     projects: [
       {
         test: {
