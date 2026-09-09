@@ -3,6 +3,7 @@ engineStrict: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExcludePrune: true
 trustPolicy: "no-downgrade"
+trustPolicyExcludePrune: true
 trustPolicyExclude:
   - undici-types@6.21.0
   - semver@6.3.1
