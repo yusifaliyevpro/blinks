@@ -1,6 +1,5 @@
 import * as z from "zod/mini";
-
-const urlSchema = z.url();
+import { urlSchema } from "./schemas";
 
 export function normalizeUrl(input: string): string {
   const trimmed = input.trim();
