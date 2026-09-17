@@ -22,24 +22,24 @@
     "lint:fix": "oxlint --fix"
   },
   "dependencies": {
-    "@upstash/ratelimit": "2.0.8",
+    "@upstash/ratelimit": "2.1.0",
     "@upstash/redis": "1.38.4",
     "hash-wasm": "4.12.0",
     "link-preview-js": "5.0.0",
-    "motion": "13.2.0",
+    "motion": "13.3.0",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-icons": "5.7.0",
     "sonner": "2.0.8",
-    "zod": "4.6.2"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
-    "@testing-library/dom": "10.4.1",
+    "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
-    "@types/node": "24.13.4",
+    "@types/node": "24.13.5",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "6.1.1",
@@ -50,10 +50,10 @@
     "oxlint": "1.83.0",
     "oxlint-tsgolint": "7.0.2001",
     "postcss-load-config": "6.0.1",
-    "react-doctor": "0.9.13",
+    "react-doctor": "0.9.14",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
-    "vitest": "5.0.0"
+    "vitest": "5.0.1"
   },
   "engines": {
     "node": ">=22.12.0"
