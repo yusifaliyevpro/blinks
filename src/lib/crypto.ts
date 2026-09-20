@@ -10,9 +10,10 @@
 // AES-GCM auth. `writeToken` is an independent secret (can't decrypt anything)
 // proving password possession, so a leaked blobId alone can't overwrite the vault.
 
+import { normalizeCategories, normalizeCategory } from "./categories";
 import { clientEnv } from "./env.client";
 import { deriveMaster } from "./kdf";
-import type { StorageBackend, VaultData } from "./types";
+import type { LinkItem, StorageBackend, VaultData } from "./types";
 
 const te = new TextEncoder();
 const td = new TextDecoder();
@@ -149,7 +150,24 @@ export async function encryptJSON(key: CryptoKey, value: unknown): Promise<strin
 }
 
 export async function decryptVault(key: CryptoKey, ciphertext: string): Promise<VaultData> {
-  return decryptJSON<VaultData>(key, ciphertext);
+  const data = await decryptJSON<VaultData>(key, ciphertext);
+  // Forward-migration: legacy `tags` arrays (tags experiment) collapse to the
+  // first entry; missing stays missing (rendered as Uncategorized). Vaults
+  // without an explicit list derive it from the links in use.
+  const links = (data.links ?? []).map((l) => {
+    const legacy = l as LinkItem & { tags?: unknown };
+    if (l.category !== undefined) return { ...l, category: normalizeCategory(l.category) };
+    if (legacy.tags !== undefined)
+      return { ...l, category: Array.isArray(legacy.tags) ? normalizeCategory(legacy.tags[0]) : "" };
+    return l;
+  });
+  const categories =
+    data.categories !== undefined
+      ? normalizeCategories(data.categories)
+      : [...new Set(links.map((l) => l.category).filter((c): c is string => Boolean(c)))].toSorted((a, b) =>
+          a.localeCompare(b),
+        );
+  return { title: data.title ?? "", links, categories };
 }
 
 export async function decryptJSON<T>(key: CryptoKey, ciphertext: string): Promise<T> {

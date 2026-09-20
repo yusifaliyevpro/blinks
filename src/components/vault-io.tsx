@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { FiDownload, FiUpload } from "react-icons/fi";
 import { toast } from "sonner";
 import * as z from "zod/mini";
+import { normalizeCategory, normalizeCategories } from "@/lib/categories";
 import type { LinkItem } from "@/lib/types";
 import { canonicalKey, isValidLink, normalizeUrl } from "@/lib/url-utils";
 
@@ -13,6 +14,7 @@ const importLinkSchema = z.object({
   description: z.optional(z.string()),
   image: z.optional(z.string()),
   createdAt: z.optional(z.number()),
+  category: z.optional(z.string()),
 });
 
 const importSchema = z.array(importLinkSchema);
@@ -30,22 +32,40 @@ function exportFilename(title: string): string {
 type VaultIOProps = {
   // Getters so we read the freshest committed state, not a render-time snapshot.
   getLinks: () => LinkItem[];
+  getCategories: () => string[];
   getTitle: () => string;
-  onImport: (links: LinkItem[]) => void;
+  onImport: (links: LinkItem[], categories: string[]) => void;
 };
 
+// New-format exports wrap links in an object: { links, categories }. Old exports
+// are a flat array. Given parsed JSON, return the file's vault-level categories
+// ([] for old-format files); membership is validated later via zod.
+function fileCategories(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null || !("links" in raw)) return [];
+  const wrapper = raw as Record<string, unknown>;
+  if (!Array.isArray(wrapper.links)) return [];
+  return wrapper.categories ?? [];
+}
+
 // Export / import controls: owns the file plumbing, JSON, validation and dedup.
-export function VaultIO({ getLinks, getTitle, onImport }: VaultIOProps) {
+export function VaultIO({ getLinks, getCategories, getTitle, onImport }: VaultIOProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Export links only (never the title) as JSON, with full cached metadata.
+  // Export links (never the title) plus the vault category list as JSON.
   function handleExport() {
     const links = getLinks();
     if (links.length === 0) {
       toast("Nothing to export yet.");
       return;
     }
-    const json = JSON.stringify(links, null, 2);
+    const json = JSON.stringify(
+      {
+        links,
+        categories: getCategories(),
+      },
+      null,
+      2,
+    );
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -75,16 +95,21 @@ export function VaultIO({ getLinks, getTitle, onImport }: VaultIOProps) {
       return;
     }
 
+    const fileCategoryList = normalizeCategories(fileCategories(raw));
+
     // Skip links already present and de-dup within the file itself (by canonical
     // URL). Fresh ids are minted so re-importing can't collide with existing ones.
     const seen = new Set(getLinks().map((l) => canonicalKey(l.url)));
     const toAdd: LinkItem[] = [];
+    const seenCategories = new Set<string>();
     for (const entry of parsed.data) {
       const url = normalizeUrl(entry.url);
       if (!isValidLink(url)) continue;
       const key = canonicalKey(url);
       if (seen.has(key)) continue;
       seen.add(key);
+      const category = normalizeCategory(entry.category);
+      if (category) seenCategories.add(category);
       toAdd.push({
         id: crypto.randomUUID(),
         url,
@@ -92,15 +117,21 @@ export function VaultIO({ getLinks, getTitle, onImport }: VaultIOProps) {
         description: entry.description ?? "",
         image: entry.image ?? "",
         createdAt: entry.createdAt ?? Date.now(),
+        category,
       });
     }
 
-    if (toAdd.length === 0) {
+    // Merge the file's vault-level categories plus any referenced by imported
+    // links into the vault list (deduped, capped, sorted) so assignments survive.
+    const mergedCategories = normalizeCategories([...getCategories(), ...fileCategoryList, ...seenCategories]);
+    const hasNewCategories = mergedCategories.length > getCategories().length;
+
+    if (toAdd.length === 0 && !hasNewCategories) {
       toast("Nothing to import — every link is already saved.");
       return;
     }
 
-    onImport(toAdd);
+    onImport(toAdd, mergedCategories);
   }
 
   const buttonClass =
