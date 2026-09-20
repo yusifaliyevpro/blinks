@@ -92,6 +92,15 @@ html::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklab, var(--color-accent) 35%, transparent);
 }
 
+/* Horizontal tab strips scroll without a visible scrollbar. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Sonner toasts, themed to match the app's inputs: the `panel` surface (a touch
    darker) with the same hairline `border`. Sonner's own dark theme sets these
    variables at (0,2,0) specificity, so we override at (0,2,1) via `body` to win

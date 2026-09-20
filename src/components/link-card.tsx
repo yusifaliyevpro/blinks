@@ -13,18 +13,31 @@ type LinkCardProps = {
   link: DisplayLink;
   index: number;
   onDelete: (id: string) => void;
+  onCategory?: (category: string) => void;
+  onCategoryClick?: (category: string) => void;
+  allCategories?: string[];
   pulse?: number;
 };
 
-export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
+export function LinkCard({
+  link,
+  index,
+  onDelete,
+  onCategory,
+  onCategoryClick,
+  allCategories = [],
+  pulse = 0,
+}: LinkCardProps) {
   const [imageOk, setImageOk] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
   const cardRef = useRef<HTMLAnchorElement>(null);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showImage = Boolean(link.image) && imageOk;
+  const category = link.category ?? "";
 
   // On each pulse nonce change (same link pasted again): flash the card and
   // scroll it into view. Driven via the DOM so it can't cascade a render.
@@ -75,6 +88,148 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
     confirmTimer.current = setTimeout(() => setConfirming(false), 3000);
   }
 
+  function closeEditor() {
+    setEditingCategory(false);
+  }
+
+  function openEditor() {
+    setEditingCategory(true);
+  }
+
+  function openEditorKey(e: React.KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openEditor();
+    }
+  }
+
+  // Choose-only: no typing a new category here — create it in the manager above,
+  // then pick. "Categorize" opens the picker; pill ✕ unassigns, name filters.
+  const categoryRow = (
+    <span
+      className="mt-2 flex flex-wrap items-center gap-1"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
+      {editingCategory ? (
+        <span className="inline-flex items-center gap-1" role="listbox" aria-label="Choose category">
+          {allCategories.length === 0 ? (
+            <span className="text-[11px] text-muted/70">No categories yet — create one above.</span>
+          ) : (
+            allCategories.map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="option"
+                aria-selected={c === category}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  closeEditor();
+                  if (c !== category) onCategory?.(c);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") closeEditor();
+                }}
+                title={`Set category to ${c}`}
+                className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors focus:outline-none ${
+                  c === category
+                    ? "border-accent/60 bg-accent/15 text-text"
+                    : "border-border bg-elevated/60 text-muted hover:border-accent/40 hover:text-text"
+                }`}
+              >
+                {c}
+              </button>
+            ))
+          )}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={closeEditor}
+            aria-label="Close category picker"
+            title="Close"
+            className="px-1 text-[11px] text-muted/70 transition-colors hover:text-text focus:outline-none"
+          >
+            Done
+          </button>
+        </span>
+      ) : category ? (
+        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-elevated/60 py-0.5 pr-1.5 pl-2 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-text">
+          <span
+            role={onCategoryClick ? "button" : undefined}
+            tabIndex={onCategoryClick ? 0 : undefined}
+            aria-label={onCategoryClick ? `Filter by ${category}` : category}
+            title={onCategoryClick ? `Filter by ${category}` : undefined}
+            onClick={onCategoryClick ? () => onCategoryClick(category) : undefined}
+            onKeyDown={
+              onCategoryClick
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onCategoryClick(category);
+                    }
+                  }
+                : undefined
+            }
+            className={onCategoryClick ? "cursor-pointer focus:outline-none" : ""}
+          >
+            {category}
+          </span>
+          {onCategory && (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={`Remove ${category}`}
+              title={`Remove ${category}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onCategory("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCategory("");
+                }
+              }}
+              className="flex h-4 w-4 items-center justify-center rounded-full text-muted/70 transition-colors hover:bg-hover hover:text-text focus:outline-none"
+            >
+              ✕
+            </span>
+          )}
+        </span>
+      ) : (
+        onCategory && (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Set category"
+            title="Set category"
+            onClick={openEditor}
+            onKeyDown={openEditorKey}
+            className="inline-flex h-5 items-center rounded-full border border-dashed border-border px-2 text-[11px] text-muted transition-colors hover:border-accent/40 hover:text-text focus:outline-none"
+          >
+            Categorize
+          </span>
+        )
+      )}
+      {category && onCategory && !editingCategory && allCategories.length > 1 && (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label="Change category"
+          title="Change category"
+          onClick={openEditor}
+          onKeyDown={openEditorKey}
+          className="px-1 text-[11px] text-muted/70 transition-colors hover:text-text focus:outline-none"
+        >
+          Change
+        </span>
+      )}
+    </span>
+  );
+
   return (
     <motion.li
       ref={ref}
@@ -107,6 +262,7 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
               <p className="truncate font-medium text-text">{link.title}</p>
               {link.description && <p className="mt-1 line-clamp-2 text-sm text-muted">{link.description}</p>}
               <p className="mt-1.5 truncate text-xs text-muted/60">{prettyUrl(link.url)}</p>
+              {!link.pending && categoryRow}
             </>
           )}
         </div>

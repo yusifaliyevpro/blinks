@@ -86,9 +86,18 @@ describe("encryptJSON / decryptJSON", () => {
     const data: VaultData = {
       title: "My links",
       links: [
-        { id: "1", url: "https://example.com", title: "Example", description: "d", image: "", createdAt: 1 },
+        {
+          id: "1",
+          url: "https://example.com",
+          title: "Example",
+          description: "d",
+          image: "",
+          createdAt: 1,
+          category: "read",
+        },
         { id: "2", url: "https://test.org/x", title: "Test", description: "", image: "https://i/x.png", createdAt: 2 },
       ],
+      categories: ["read", "watch"],
     };
     const ct = await encryptJSON(vaultA.key, data);
     expect(await decryptVault(vaultA.key, ct)).toEqual(data);
@@ -119,7 +128,7 @@ describe("encryptJSON / decryptJSON", () => {
       image: "",
       createdAt: i,
     }));
-    const data: VaultData = { title: "big", links };
+    const data: VaultData = { title: "big", links, categories: [] };
     const ct = await encryptJSON(vaultA.key, data);
     // gzip should keep the blob far smaller than the raw JSON of repetitive text.
     expect(atob(ct).length).toBeLessThan(JSON.stringify(data).length);
