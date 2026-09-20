@@ -1,32 +1,25 @@
 // Client-side, zero-knowledge crypto — never runs on the server.
 //
-//   password ──Argon2id──▶ master ──HKDF(info=enc)───▶ AES-GCM key (encKey)
-//                                ├──HKDF(info=id)────▶ blobId (Redis key)
-//                                └──HKDF(info=write)─▶ writeToken (write auth)
+//   (email + KDF_SALT) ─▶ salt ─┐
+//                               ├─Argon2id─▶ master ──HKDF(enc)───▶ AES-GCM key
+//   password ────────────────────┘                 ├──HKDF(id)────▶ blobId
+//                                                  └──HKDF(write)─▶ writeToken
 //
 // One Argon2id pass, three HKDF-SHA256 outputs (distinct `info` labels). A wrong
-// password yields a wrong blobId (Redis miss) or fails AES-GCM auth. `writeToken`
-// is an independent secret (can't decrypt anything) proving password possession,
-// so a leaked blobId alone can't overwrite the vault.
+// email or password yields a wrong blobId (a miss, so an empty vault) or fails
+// AES-GCM auth. `writeToken` is an independent secret (can't decrypt anything)
+// proving password possession, so a leaked blobId alone can't overwrite the vault.
 
-import { argon2id } from "hash-wasm";
 import { clientEnv } from "./env.client";
+import { deriveMaster } from "./kdf";
 import type { StorageBackend, VaultData } from "./types";
 
 const te = new TextEncoder();
 const td = new TextDecoder();
 
-// Argon2id: 64 MiB / 3 iterations / 1 lane. Runs once per unlock.
-const KDF = {
-  parallelism: 1,
-  iterations: 3,
-  memorySize: 65_536, // KiB → 64 MiB
-  hashLength: 32,
-} as const;
-
-const ENC_INFO = te.encode("blinks:enc-key:v1");
-const ID_INFO = te.encode("blinks:blob-id:v1");
-const WRITE_INFO = te.encode("blinks:write-token:v1");
+const ENC_INFO = te.encode("blinks:enc-key:v2");
+const ID_INFO = te.encode("blinks:blob-id:v2");
+const WRITE_INFO = te.encode("blinks:write-token:v2");
 
 const IV_BYTES = 12;
 
@@ -107,15 +100,19 @@ async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", ab(raw), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 
-export async function deriveVault(password: string): Promise<Vault> {
-  const argonSalt = await sha256(te.encode(clientEnv.NEXT_PUBLIC_KDF_SALT));
+// Flat and permanent: no provider-specific rules (Gmail dots, `+tags`), because
+// changing this mapping later makes every existing vault unreachable.
+export function normalizeEmail(email: string): string {
+  return email.trim().normalize("NFKC").toLowerCase();
+}
 
-  const masterBytes = await argon2id({
-    password,
-    salt: argonSalt,
-    ...KDF,
-    outputType: "binary",
-  });
+// The email is a per-vault salt, not a second factor and not a secret: it stops
+// one Argon2 pass from testing a password against every vault in a stolen dump
+// at once, the same way KDF_SALT separates deployments. It never leaves the browser.
+export async function deriveVault(email: string, password: string): Promise<Vault> {
+  const argonSalt = await sha256(te.encode(`blinks:v2|${clientEnv.NEXT_PUBLIC_KDF_SALT}|${normalizeEmail(email)}`));
+
+  const masterBytes = await deriveMaster(password, argonSalt);
 
   const master = await crypto.subtle.importKey("raw", ab(masterBytes), "HKDF", false, ["deriveBits"]);
 

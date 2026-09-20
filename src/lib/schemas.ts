@@ -16,6 +16,9 @@ export const versionSchema = z.int().check(z.minimum(0));
 
 export const urlSchema = z.compile(z.url().check(z.maxLength(2048)));
 
+// Client-only: the email is a KDF input and never reaches the server.
+export const emailSchema = z.compile(z.email().check(z.maxLength(254)));
+
 export const putBlobSchema = z.compile(
   z.object({
     blobId: blobIdSchema,

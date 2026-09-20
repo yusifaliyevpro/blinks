@@ -1,11 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiCheck, FiEye, FiEyeOff, FiGithub, FiRefreshCw } from "react-icons/fi";
 import { toast } from "sonner";
-import { decryptVault, deriveVault, generatePassword, saveSession, type Session } from "@/lib/crypto";
+import * as z from "zod/mini";
+import { decryptVault, deriveVault, generatePassword, normalizeEmail, saveSession, type Session } from "@/lib/crypto";
 import { allowPasswordManagers } from "@/lib/env.client";
+import { warmKdf } from "@/lib/kdf";
 import { loadBackendPreference, saveBackendPreference } from "@/lib/preferences";
+import { emailSchema } from "@/lib/schemas";
 import { getBlob } from "@/lib/store";
 import type { LinkItem, StorageBackend } from "@/lib/types";
 import { Logo } from "./logo";
@@ -26,17 +29,20 @@ export function PasswordScreen({
   redisAvailable: boolean;
   onUnlock: (u: Unlocked) => void;
 }) {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [shake, setShake] = useState(false);
+  const [emailShake, setEmailShake] = useState(false);
   const [copied, setCopied] = useState(false);
   const [show, setShow] = useState(false);
-  // Preselect the last-used backend (remembered across tabs) when the remote
-  // store is available; otherwise local is the only path.
   const [backend, setBackend] = useState<StorageBackend>(() =>
     redisAvailable ? (loadBackendPreference() ?? "redis") : "local",
   );
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Compile the KDF worker while the user types, not after they submit.
+  useEffect(warmKdf, []);
 
   function selectBackend(value: StorageBackend) {
     setBackend(value);
@@ -47,21 +53,33 @@ export function PasswordScreen({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (busy) return;
+
+    const cleanEmail = normalizeEmail(email);
+    if (cleanEmail.length === 0) return;
+    if (!z.validate(emailSchema, cleanEmail)) {
+      setEmailShake(true);
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    // Enter from the email field with nothing typed yet just advances.
+    if (!password) {
+      inputRef.current?.focus();
+      return;
+    }
     // Minimum length: this vault's master key is the only secret and is offline-
     // crackable, so reject obviously-too-short passwords (the generator makes 200).
     // Shake + toast as feedback (no native minLength, so no browser bubble shows).
-    if (!password || password.length < MIN_PASSWORD) {
-      if (password.length > 0) {
-        setShake(true);
-        toast.error(`Password must be at least ${MIN_PASSWORD} characters.`);
-      }
+    if (password.length < MIN_PASSWORD) {
+      setShake(true);
+      toast.error(`Password must be at least ${MIN_PASSWORD} characters.`);
       return;
     }
     setBusy(true);
     setShake(false);
+    setEmailShake(false);
 
     try {
-      const vault = await deriveVault(password);
+      const vault = await deriveVault(cleanEmail, password);
       const blob = await getBlob(backend, vault.blobId);
 
       let title = "";
@@ -73,6 +91,8 @@ export function PasswordScreen({
         title = data.title;
         links = data.links;
         version = blob.version;
+      } else {
+        toast("New vault created.");
       }
 
       saveSession(vault.blobId, vault.encKeyBytes, vault.writeToken, backend);
@@ -130,11 +150,31 @@ export function PasswordScreen({
           <h1 className="font-display text-6xl leading-none tracking-tight text-text select-none">Blinks</h1>
         </div>
 
+        <input
+          type="text"
+          inputMode="email"
+          autoFocus
+          autoComplete={allowPasswordManagers ? "username" : "off"}
+          spellCheck={false}
+          disabled={busy}
+          value={email}
+          placeholder="Email"
+          data-1p-ignore={allowPasswordManagers ? undefined : true}
+          data-lpignore={allowPasswordManagers ? undefined : "true"}
+          data-bwignore={allowPasswordManagers ? undefined : "true"}
+          data-form-type={allowPasswordManagers ? undefined : "other"}
+          onChange={(e) => setEmail(e.target.value)}
+          onAnimationEnd={() => setEmailShake(false)}
+          aria-invalid={emailShake}
+          className={`mb-2.5 w-full rounded-xl border bg-panel px-4 py-3 text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 disabled:opacity-60 ${
+            emailShake ? "animate-shake border-red-500/70" : "border-border"
+          }`}
+        />
+
         <div className="relative">
           <input
             ref={inputRef}
             type={show ? "text" : "password"}
-            autoFocus
             autoComplete={allowPasswordManagers ? "current-password" : "off"}
             spellCheck={false}
             disabled={busy}
@@ -177,6 +217,11 @@ export function PasswordScreen({
             </button>
           </div>
         </div>
+
+        {/* Two text inputs kill implicit submission, so the form needs a real submit button. */}
+        <button type="submit" disabled={busy} className="sr-only">
+          Unlock
+        </button>
 
         {password.length > 0 && (
           <p className="absolute top-full left-0 mt-2 text-xs text-muted tabular-nums select-none">{password.length}</p>

@@ -3,21 +3,23 @@
   Blinks
 </h1>
 
-Blinks is a private place to save links. Everything is encrypted inside your browser, and you can keep it on your device or store it remotely to reach from anywhere. You unlock it with one password. The server never sees your password or your links. It only ever holds a blob of bytes it cannot read.
+Blinks is a private place to save links. Everything is encrypted inside your browser, and you can keep it on your device or store it remotely to reach from anywhere. You unlock it with an email and a password. The server never sees either one, or your links. It only ever holds a blob of bytes it cannot read.
 
 See the [live demo](https://blinks-demo1.vercel.app/). It is for testing only; use your deployment or local setup for actual use.
 
-## One password is the whole account
+## Your email and password are the whole account
 
-No sign up. No email. No username. No "forgot password" link.
+No sign up. No verification link. No username. No "forgot password" link.
 
-Your password does two jobs at once: it is the **key** that encrypts your links, and it points to the **address** where they are stored. Type it and you open your vault. Type a different one and you get a different, empty vault. There is no "correct" password, because there is nothing on the server to check against.
+Together they do two jobs at once: they are the **key** that encrypts your links, and they point to the **address** where those links are stored. Type them and you open your vault. Change either one, even by a letter, and you get a different, empty vault. There is no "correct" pair, because there is nothing on the server to check against.
 
-So two things follow. Lose your password and the data is gone for good, since a reset would let someone in without it. And your password is the only lock, so anyone who has it can open your vault. Treat it like the master key it is.
+The email is never sent anywhere. It does not leave your browser, and it is not kept inside the vault either. It feeds the key derivation, where it works as a salt unique to you. Without it, anyone holding a stolen copy of the database could test one password guess against every vault at once. With it, they have to redo the whole slow derivation for each email they want to try. It is not a second secret, and it is not a second factor: your password is still the only thing an attacker has to guess.
+
+So two things follow. Lose your password, or forget which email you paired it with, and the data is gone for good, since a reset would let someone in without it. And the two together are the only lock, so anyone holding both can open your vault.
 
 To help, Blinks generates a 200 character random password in one click and copies it to your clipboard. That is far too much entropy to ever collide, and rate limiting rules out brute force.
 
-> Note: This is a personal project to explore zero knowledge architecture, where the server truly cannot read your data. For a real product, I would also add email and 2FA, for security and for marketing and personalization.
+> Note: This is a personal project to explore zero knowledge architecture, where the server truly cannot read your data. For a real product, I would also add 2FA, and use the email for real account recovery and personalization rather than only as a salt.
 
 ## How it works
 
@@ -27,7 +29,7 @@ To help, Blinks generates a 200 character random password in one click and copie
 
 Step by step:
 
-1. Your password and a fixed public salt go into Argon2id, a slow and memory heavy function. It returns a master secret.
+1. Your email is lowercased and mixed with a fixed public salt to form a salt unique to you. That salt and your password go into Argon2id, a slow and memory heavy function, which returns a master secret.
 2. HKDF splits that secret into three independent parts: `encKey` (an AES-256 key), `blobId` (a hex address), and `writeToken` (a write permit).
 3. Your whole vault, its title and every link, gets gzipped, then encrypted as one payload with AES-256-GCM using `encKey`.
 4. The browser sends `blobId`, the ciphertext, and `writeToken` to a server action.
@@ -64,11 +66,12 @@ Configure Redis credentials and the password screen shows a **Redis / Local** to
 
 ## The Encryption
 
-- **Key derivation:** Argon2id (64 MB of memory, 3 passes). This makes guessing a password slow and expensive, even for someone holding the ciphertext.
+- **Key derivation:** Argon2id (128 MB of memory, 3 passes), run in a Web Worker so the tab stays responsive while it works. This makes guessing a password slow and expensive, even for someone holding the ciphertext.
+- **Per vault salting:** your email goes into the Argon2id salt, so one derivation can never be reused against another vault. The public `NEXT_PUBLIC_KDF_SALT` does the same across deployments.
 - **Cipher:** AES-256-GCM with a fresh random IV on every write. GCM also verifies the data was not tampered with.
 - **Key split:** HKDF-SHA256 with separate labels, so the storage address, the encryption key, and the write token stay independent.
 - **Write authorization:** every write must carry `writeToken`, a third HKDF output that cannot decrypt anything; `blobId` alone only reads. See [Why the write token](#why-the-write-token).
-- **No login to attack:** a wrong password lands on a different `blobId` (which is empty) or fails the GCM check. There is nothing to brute force, because there is no login step.
+- **No login to attack:** a wrong email or password lands on a different `blobId` (which is empty) or fails the GCM check. There is nothing to brute force, because there is no login step.
 
 ### A note on quantum
 
@@ -110,7 +113,7 @@ You need Node 20 or newer and pnpm.
    pnpm dev
    ```
 
-   Open [http://localhost:3000](http://localhost:3000) and type a password. That password is now your vault.
+   Open [http://localhost:3000](http://localhost:3000) and type an email and a password. That pair is now your vault.
 
 ## Deploy
 

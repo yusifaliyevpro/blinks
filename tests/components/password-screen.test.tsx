@@ -5,7 +5,8 @@ import { PasswordScreen } from "@/components/password-screen";
 type Backend = "redis" | "local";
 type Derived = { blobId: string; key: CryptoKey; writeToken: string; encKeyBytes: Uint8Array };
 
-const deriveVault = vi.hoisted(() => vi.fn<(password: string) => Promise<Derived>>());
+const deriveVault = vi.hoisted(() => vi.fn<(email: string, password: string) => Promise<Derived>>());
+const normalizeEmail = vi.hoisted(() => vi.fn<(email: string) => string>((e) => e.trim().toLowerCase()));
 const decryptVault = vi.hoisted(() =>
   vi.fn<(key: CryptoKey, ct: string) => Promise<{ title: string; links: unknown[] }>>(),
 );
@@ -23,7 +24,7 @@ const toast = vi.hoisted(() =>
   Object.assign(vi.fn<(message: string) => void>(), { error: vi.fn<(message: string) => void>() }),
 );
 
-vi.mock("@/lib/crypto", () => ({ deriveVault, decryptVault, generatePassword, saveSession }));
+vi.mock("@/lib/crypto", () => ({ deriveVault, decryptVault, generatePassword, normalizeEmail, saveSession }));
 vi.mock("@/lib/preferences", () => ({ loadBackendPreference, saveBackendPreference }));
 vi.mock("@/lib/store", () => ({ getBlob }));
 vi.mock("sonner", () => ({ toast }));
@@ -38,6 +39,13 @@ const FAKE_VAULT: Derived = {
 
 // Passwords used to drive the unlock flow must clear the 12-char minimum.
 const GOOD_PW = "password1234";
+const GOOD_EMAIL = "user@example.com";
+
+// Both fields gate the unlock, so every flow test fills the email as well.
+function fill(password: string, email = GOOD_EMAIL) {
+  fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: email } });
+  fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: password } });
+}
 
 // Captured per-test so assertions reference a bound mock, not navigator's getter.
 let clipboardWrite: ReturnType<typeof vi.fn<(text: string) => Promise<void>>>;
@@ -115,7 +123,7 @@ describe("PasswordScreen — unlock flow", () => {
     getBlob.mockResolvedValue(null);
     const { onUnlock, input } = renderScreen();
 
-    fireEvent.change(input, { target: { value: GOOD_PW } });
+    fill(GOOD_PW);
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });
@@ -142,7 +150,7 @@ describe("PasswordScreen — unlock flow", () => {
     decryptVault.mockResolvedValue({ title: "Mine", links: [{ id: "1" }] });
     const { onUnlock, input } = renderScreen();
 
-    fireEvent.change(input, { target: { value: GOOD_PW } });
+    fill(GOOD_PW);
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });
@@ -156,7 +164,7 @@ describe("PasswordScreen — unlock flow", () => {
     decryptVault.mockRejectedValue(new Error("auth failure"));
     const { onUnlock, input } = renderScreen();
 
-    fireEvent.change(input, { target: { value: "wrongpassword" } });
+    fill("wrongpassword");
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });
@@ -174,7 +182,7 @@ describe("PasswordScreen — unlock flow", () => {
     getBlob.mockResolvedValue(null);
     const { input } = renderScreen();
 
-    fireEvent.change(input, { target: { value: GOOD_PW } });
+    fill(GOOD_PW);
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });
@@ -198,7 +206,7 @@ describe("PasswordScreen — unlock flow", () => {
     // No native constraint validation — our handler owns the feedback.
     expect(input).not.toHaveAttribute("minlength");
 
-    fireEvent.change(input, { target: { value: "short" } });
+    fill("short");
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });
@@ -213,7 +221,7 @@ describe("PasswordScreen — unlock flow", () => {
 describe("PasswordScreen — backend selection", () => {
   async function unlock(input: HTMLElement) {
     getBlob.mockResolvedValue(null);
-    fireEvent.change(input, { target: { value: GOOD_PW } });
+    fill(GOOD_PW);
     await act(async () => {
       fireEvent.submit(input.closest("form")!);
     });

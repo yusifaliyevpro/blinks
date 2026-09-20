@@ -22,4 +22,11 @@ export default defineConfig({
     "unicorn/prefer-node-protocol": "warn",
     "typescript/consistent-type-imports": "warn",
   },
+  overrides: [
+    {
+      // Worker.postMessage takes no targetOrigin; the rule only fits window.postMessage.
+      files: ["src/lib/kdf.ts", "src/lib/kdf.worker.ts"],
+      rules: { "unicorn/require-post-message-target-origin": "off" },
+    },
+  ],
 });

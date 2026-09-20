@@ -11,8 +11,9 @@ import {
 } from "@/lib/crypto";
 import type { VaultData } from "@/lib/types";
 
-// deriveVault runs a real Argon2id pass (64 MiB / 3 iters). It's deliberately
-// slow, so derive shared vaults once and reuse them across the suite.
+// deriveVault runs a real Argon2id pass. It's deliberately slow, so derive
+// shared vaults once and reuse them across the suite.
+const EMAIL_A = "a@example.com";
 const PW_A = "correct horse battery staple";
 const PW_B = "a-completely-different-password";
 
@@ -26,9 +27,9 @@ beforeEach(() => {
 
 describe("deriveVault", () => {
   beforeEach(async () => {
-    vaultA ??= await deriveVault(PW_A);
-    vaultA2 ??= await deriveVault(PW_A);
-    vaultB ??= await deriveVault(PW_B);
+    vaultA ??= await deriveVault(EMAIL_A, PW_A);
+    vaultA2 ??= await deriveVault(EMAIL_A, PW_A);
+    vaultB ??= await deriveVault(EMAIL_A, PW_B);
   }, 30_000);
 
   it("derives a 64-char lowercase-hex blobId", () => {

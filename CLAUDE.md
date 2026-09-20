@@ -1,7 +1,7 @@
 # Blinks
 
 A private, single-user, **zero-knowledge encrypted link manager**. The user saves
-links (with OG metadata) behind one password; everything is encrypted in the
+links (with OG metadata) behind an email + password; everything is encrypted in the
 browser, and whatever store holds the vault only ever sees an opaque ciphertext
 blob. No accounts, no server-side password check, no plaintext ever leaves the
 client. Dark-mode only, deployed on Vercel.
@@ -58,9 +58,16 @@ Playwright or a real browser. Two distinct flows, depending on the request:
 
 ## Architecture
 
-- **Crypto — `src/lib/crypto.ts` (client only).** `password + NEXT_PUBLIC_KDF_SALT`
-  → Argon2id → one master → HKDF (three distinct `info` labels) → non-extractable
-  AES-GCM key (`encKey`) + hex `blobId` (storage key) + hex `writeToken` (write auth).
+- **Crypto — `src/lib/crypto.ts` (client only).** The Argon2id salt is
+  `SHA-256("blinks:v2|" + NEXT_PUBLIC_KDF_SALT + "|" + normalizeEmail(email))`,
+  the secret is `password`. Argon2id (`src/lib/kdf.ts`, in a Web Worker, params in
+  `kdf-params.ts`) → one master → HKDF (three distinct `info` labels) →
+  non-extractable AES-GCM key (`encKey`) + hex `blobId` (storage key) + hex
+  `writeToken` (write auth). The email is a **per-vault salt, not a second factor**:
+  never secret, never leaves the browser, never stored in the blob. It only stops one
+  Argon2 pass from testing a password against every vault in a stolen dump at once.
+  `normalizeEmail` (trim, NFKC, lowercase) is permanent; changing it makes every
+  existing vault unreachable.
   Payload is **gzip-compressed (`CompressionStream`) before AES-GCM encryption**.
   The raw key bytes + `writeToken` + chosen backend persist in `sessionStorage`
   (survive refresh, clear on tab close). Also holds the CSPRNG password generator.
@@ -93,7 +100,7 @@ Playwright or a real browser. Two distinct flows, depending on the request:
   **SSRF guard** (rejects private/loopback/link-local).
 - **Client UI.** `vault-app` (phase machine: checking → locked → unlocked; takes
   `redisAvailable` from the server) → `password-screen` or `links-view`.
-  `password-screen` shows a **Redis/Local segmented toggle** (only when Redis is
+  `password-screen` takes an email + password, shows a **Redis/Local segmented toggle** (only when Redis is
   available; else Local is forced), preselected from the cross-tab preference in
   `src/lib/preferences.ts` (localStorage). `links-view` owns the vault commit
   (`useOptimistic` + `startTransition`, conflict-retry). `link-card`, `vault-title`
