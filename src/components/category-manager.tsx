@@ -21,12 +21,17 @@ export function CategoryManager({
   const [editing, setEditing] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editing) editRef.current?.focus();
   }, [editing]);
+
+  useEffect(() => {
+    if (showAdd) inputRef.current?.focus();
+  }, [showAdd]);
 
   function submit() {
     const next = normalizeCategory(draft);
@@ -45,12 +50,30 @@ export function CategoryManager({
 
   return (
     <div className="mt-3 rounded-xl border border-border bg-panel px-3 py-2.5">
-      <p className="text-xs font-medium text-muted select-none">
-        Categories
-        <span className="ml-1.5 tabular-nums opacity-60">
-          {categories.length}/{MAX_CATEGORIES}
-        </span>
-      </p>
+      <div className="flex items-center">
+        <p className="text-xs font-medium text-muted select-none">
+          Categories
+          <span className="ml-1.5 tabular-nums opacity-60">
+            {categories.length}/{MAX_CATEGORIES}
+          </span>
+        </p>
+        {categories.length > 0 && categories.length < MAX_CATEGORIES && (
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setDraft("");
+              setShowAdd((v) => !v);
+            }}
+            aria-expanded={showAdd}
+            aria-label={showAdd ? "Cancel new category" : "Add category"}
+            title={showAdd ? "Cancel" : "Add category"}
+            className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none"
+          >
+            {showAdd ? <FiX className="h-3.5 w-3.5" /> : <FiPlus className="h-3.5 w-3.5" />}
+          </button>
+        )}
+      </div>
       {categories.length > 0 && (
         <ul className="mt-2 space-y-1">
           {categories.map((cat) => (
@@ -123,52 +146,54 @@ export function CategoryManager({
           ))}
         </ul>
       )}
-      <div className="mt-2 flex items-center gap-1.5">
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              submit();
-            } else if (e.key === "Escape") {
-              setDraft("");
-              inputRef.current?.blur();
-            }
-          }}
-          placeholder={categories.length === 0 ? "Create your first category" : "New category"}
-          autoComplete="off"
-          spellCheck={false}
-          maxLength={24}
-          aria-label="New category"
-          disabled={categories.length >= MAX_CATEGORIES}
-          className="min-w-0 flex-1 rounded-lg border border-border bg-elevated px-2.5 py-1.5 text-xs text-text outline-none placeholder:text-muted/60 focus:border-accent/70 disabled:opacity-60"
-        />
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={submit}
-          disabled={!normalizeCategory(draft) || categories.length >= MAX_CATEGORIES}
-          aria-label="Add category"
-          title="Add category"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none disabled:opacity-40"
-        >
-          <FiPlus className="h-3.5 w-3.5" />
-        </button>
-        {draft && (
+      {(showAdd || categories.length === 0) && (
+        <div className="mt-2 flex items-center gap-1.5">
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submit();
+              } else if (e.key === "Escape") {
+                setDraft("");
+                inputRef.current?.blur();
+              }
+            }}
+            placeholder={categories.length === 0 ? "Create your first category" : "New category"}
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={24}
+            aria-label="New category"
+            disabled={categories.length >= MAX_CATEGORIES}
+            className="min-w-0 flex-1 rounded-lg border border-border bg-elevated px-2.5 py-1.5 text-xs text-text outline-none placeholder:text-muted/60 focus:border-accent/70 disabled:opacity-60"
+          />
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setDraft("")}
-            aria-label="Clear category input"
-            title="Clear"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none"
+            onClick={submit}
+            disabled={!normalizeCategory(draft) || categories.length >= MAX_CATEGORIES}
+            aria-label="Add category"
+            title="Add category"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none disabled:opacity-40"
           >
-            <FiX className="h-3.5 w-3.5" />
+            <FiPlus className="h-3.5 w-3.5" />
           </button>
-        )}
-      </div>
+          {draft && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setDraft("")}
+              aria-label="Clear category input"
+              title="Clear"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none"
+            >
+              <FiX className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
