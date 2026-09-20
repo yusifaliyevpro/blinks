@@ -144,7 +144,7 @@ export function PasswordScreen({
       >
         <FiGithub className="h-5 w-5" />
       </a>
-      <form onSubmit={submit} className="relative w-full max-w-sm">
+      <form onSubmit={submit} className="relative w-full max-w-xs">
         <div className="absolute inset-x-0 bottom-full mb-6 flex flex-col items-center justify-center gap-4">
           <Logo open={!show} className="h-14 w-auto text-text" />
           <h1 className="font-display text-6xl leading-none tracking-tight text-text select-none">Blinks</h1>
@@ -166,7 +166,7 @@ export function PasswordScreen({
           onChange={(e) => setEmail(e.target.value)}
           onAnimationEnd={() => setEmailShake(false)}
           aria-invalid={emailShake}
-          className={`mb-2.5 w-full rounded-xl border bg-panel px-4 py-3 text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 disabled:opacity-60 ${
+          className={`mb-2 w-full rounded-xl border bg-panel px-3.5 py-2.5 text-sm text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 disabled:opacity-60 ${
             emailShake ? "animate-shake border-red-500/70" : "border-border"
           }`}
         />
@@ -188,11 +188,11 @@ export function PasswordScreen({
             onChange={(e) => setPassword(e.target.value)}
             onAnimationEnd={() => setShake(false)}
             aria-invalid={shake}
-            className={`w-full rounded-xl border bg-panel py-3 pr-24 pl-4 text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 disabled:opacity-60 ${
+            className={`w-full rounded-xl border bg-panel py-2.5 pr-18 pl-3.5 text-sm text-text transition-colors outline-none placeholder:text-muted focus:border-accent/70 disabled:opacity-60 ${
               shake ? "animate-shake border-red-500/70" : "border-border"
             }`}
           />
-          <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-0.5">
+          <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5">
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
@@ -200,9 +200,9 @@ export function PasswordScreen({
               aria-label={show ? "Hide password" : "Show password"}
               title={show ? "Hide password" : "Show password"}
               aria-pressed={show}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none"
             >
-              {show ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+              {show ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
             </button>
             <button
               type="button"
@@ -211,9 +211,9 @@ export function PasswordScreen({
               disabled={busy}
               aria-label="Generate a strong random password"
               title="Generate a strong random password"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none disabled:opacity-60"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-text focus:outline-none disabled:opacity-60"
             >
-              {copied ? <FiCheck className="h-5 w-5 text-accent" /> : <FiRefreshCw className="h-5 w-5" />}
+              {copied ? <FiCheck className="h-4 w-4 text-accent" /> : <FiRefreshCw className="h-4 w-4" />}
             </button>
           </div>
         </div>
