@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
-import react from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 // Public, non-secret KDF salt used only by the test run. Key derivation just has
@@ -7,7 +8,7 @@ import { defineConfig } from "vitest/config";
 const TEST_KDF_SALT = "test-kdf-salt-0123456789abcdef";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), babel({ presets: [reactCompilerPreset()] })],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

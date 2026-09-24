@@ -9,3 +9,8 @@ trustPolicyExclude:
 allowBuilds:
   sharp: true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - "@upstash/ratelimit@2.2.0"
+  - framer-motion@13.4.2
+  - motion-dom@13.4.2
+  - motion@13.4.2

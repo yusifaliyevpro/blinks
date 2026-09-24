@@ -218,15 +218,15 @@ describe("PasswordScreen — unlock flow", () => {
   });
 });
 
-describe("PasswordScreen — backend selection", () => {
-  async function unlock(input: HTMLElement) {
-    getBlob.mockResolvedValue(null);
-    fill(GOOD_PW);
-    await act(async () => {
-      fireEvent.submit(input.closest("form")!);
-    });
-  }
+async function unlock(input: HTMLElement) {
+  getBlob.mockResolvedValue(null);
+  fill(GOOD_PW);
+  await act(async () => {
+    fireEvent.submit(input.closest("form")!);
+  });
+}
 
+describe("PasswordScreen — backend selection", () => {
   it("shows the Redis/Local toggle when Redis is available", () => {
     renderScreen(undefined, true);
     expect(screen.getByRole("radiogroup", { name: /storage backend/i })).toBeInTheDocument();
