@@ -18,6 +18,8 @@ const instrumentSerif = Instrument_Serif({
   weight: "400",
 });
 
+export const ensureStatic = "navigation";
+
 export const metadata: Metadata = {
   title: {
     default: "Blinks",
