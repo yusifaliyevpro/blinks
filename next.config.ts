@@ -29,6 +29,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   experimental: {
+    agentUpgrade: "latest",
     useOffline: true,
     useTypeScriptCli: true,
     turbopackRustReactCompiler: true,
