@@ -46,7 +46,7 @@
     "@vitejs/plugin-react": "6.1.2",
     "fake-indexeddb": "6.2.7",
     "greenly": "1.2.0",
-    "happy-dom": "20.14.5",
+    "happy-dom": "21.0.4",
     "oxfmt": "0.75.0",
     "oxlint": "1.90.0",
     "oxlint-tsgolint": "7.0.2005",

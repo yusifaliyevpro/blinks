@@ -53,7 +53,7 @@ importers:
         version: 10.4.2
       '@testing-library/jest-dom':
         specifier: 7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@20.14.5)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0)))
+        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0)))
       '@testing-library/react':
         specifier: 16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -76,8 +76,8 @@ importers:
         specifier: 1.2.0
         version: 1.2.0
       happy-dom:
-        specifier: 20.14.5
-        version: 20.14.5
+        specifier: 21.0.4
+        version: 21.0.4
       oxfmt:
         specifier: 0.75.0
         version: 0.75.0
@@ -101,7 +101,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 5.0.5
-        version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@20.14.5)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0))
+        version: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0))
 
 packages:
 
@@ -2015,8 +2015,8 @@ packages:
     engines: {node: '>=22.18.0'}
     hasBin: true
 
-  happy-dom@20.14.5:
-    resolution: {integrity: sha512-x/RzkpWO40bTjIoT30iQtt64FLLmH/iRcUCN2X//bLx7H3ifkdfPXyqsro/OYtqzIAhiLMMA7mmiOR9C3NOKjQ==}
+  happy-dom@21.0.4:
+    resolution: {integrity: sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw==}
     engines: {node: '>=20.0.0'}
 
   hash-wasm@4.12.0:
@@ -3743,7 +3743,7 @@ snapshots:
       picocolors: 1.1.1
       pretty-format: 27.5.1
 
-  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@20.14.5)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0)))':
+  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0)))':
     dependencies:
       '@adobe/css-tools': 4.5.0
       '@testing-library/dom': 10.4.2
@@ -3753,7 +3753,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@20.14.5)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0))
+      vitest: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0))
 
   '@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
@@ -4246,7 +4246,7 @@ snapshots:
     dependencies:
       jiti: 2.7.0
 
-  happy-dom@20.14.5:
+  happy-dom@21.0.4:
     dependencies:
       '@types/node': 24.19.2
       '@types/whatwg-mimetype': 3.0.2
@@ -4968,7 +4968,7 @@ snapshots:
       jiti: 2.7.0
       yaml: 2.9.0
 
-  vitest@5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@20.14.5)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0)):
+  vitest@5.0.5(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.5(vite@8.2.1(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.0))
@@ -4987,7 +4987,7 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
       '@types/node': 24.19.2
-      happy-dom: 20.14.5
+      happy-dom: 21.0.4
     transitivePeerDependencies:
       - msw
 
