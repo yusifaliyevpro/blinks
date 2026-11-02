@@ -51,7 +51,7 @@
     "oxlint": "1.90.0",
     "oxlint-tsgolint": "7.0.2005",
     "postcss-load-config": "6.0.1",
-    "react-doctor": "0.9.18",
+    "react-doctor": "0.9.21",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
     "vitest": "5.0.5"
