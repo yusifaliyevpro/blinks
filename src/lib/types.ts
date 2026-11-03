@@ -29,10 +29,16 @@ export type LinkItem = LinkMetadata & {
   id: string;
   url: string;
   createdAt: number;
+  // Single category per link ("", = uncategorized). Legacy `tags` arrays from
+  // the tags experiment migrate to the first entry on decrypt.
+  category?: string;
 };
 
 // The full decrypted vault payload (encrypted as a single blob).
 export type VaultData = {
   title: string;
   links: LinkItem[];
+  // Vault-level category list, managed explicitly. Links reference one by name;
+  // a link whose category was deleted renders as Uncategorized.
+  categories?: string[];
 };
