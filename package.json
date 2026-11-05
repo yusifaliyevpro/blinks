@@ -26,8 +26,8 @@
     "@upstash/redis": "1.41.0",
     "hash-wasm": "4.12.0",
     "link-preview-js": "5.0.1",
-    "motion": "14.9.0",
-    "next": "16.4.4",
+    "motion": "14.9.1",
+    "next": "16.4.5",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-icons": "5.7.0",
@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@rolldown/plugin-babel": "0.3.0",
-    "@tailwindcss/postcss": "4.3.3",
+    "@tailwindcss/postcss": "4.3.4",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
@@ -47,14 +47,14 @@
     "fake-indexeddb": "6.2.7",
     "greenly": "1.2.0",
     "happy-dom": "21.0.4",
-    "oxfmt": "0.75.0",
-    "oxlint": "1.90.0",
+    "oxfmt": "0.76.0",
+    "oxlint": "1.91.0",
     "oxlint-tsgolint": "7.0.2005",
     "postcss-load-config": "6.0.1",
     "react-doctor": "0.9.22",
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "4.3.4",
     "typescript": "7.0.2",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   },
   "engines": {
     "node": ">=22.12.0"

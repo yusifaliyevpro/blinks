@@ -9,36 +9,33 @@ export function Logo({ open = true, className }: { open?: boolean; className?: s
   useEffect(() => {
     // Cache the eye's center so we don't force a layout (getBoundingClientRect)
     // on every mousemove; refresh it on resize/scroll instead.
-    let cx = 0;
-    let cy = 0;
+    const center = { x: 0, y: 0 };
     function measure() {
       const svg = svgRef.current;
       if (!svg) return;
       const rect = svg.getBoundingClientRect();
-      cx = rect.left + rect.width / 2;
-      cy = rect.top + rect.height / 2;
+      center.x = rect.left + rect.width / 2;
+      center.y = rect.top + rect.height / 2;
     }
     measure();
 
     // Coalesce bursts of mousemove events into one style write per frame.
-    let frame = 0;
-    let lastX = 0;
-    let lastY = 0;
+    const pending = { x: 0, y: 0, frame: 0 };
     function apply() {
-      frame = 0;
+      pending.frame = 0;
       const pupil = pupilRef.current;
       if (!pupil) return;
-      const dx = lastX - cx;
-      const dy = lastY - cy;
+      const dx = pending.x - center.x;
+      const dy = pending.y - center.y;
       const angle = Math.atan2(dy, dx);
       const strength = Math.min(Math.hypot(dx, dy) / 60, 1);
       const max = 2.3; // pupil travel in viewBox units
       pupil.style.transform = `translate(${Math.cos(angle) * max * strength}px, ${Math.sin(angle) * max * strength}px)`;
     }
     function onMove(e: MouseEvent) {
-      lastX = e.clientX;
-      lastY = e.clientY;
-      if (!frame) frame = requestAnimationFrame(apply);
+      pending.x = e.clientX;
+      pending.y = e.clientY;
+      if (!pending.frame) pending.frame = requestAnimationFrame(apply);
     }
 
     window.addEventListener("mousemove", onMove);
@@ -48,7 +45,7 @@ export function Logo({ open = true, className }: { open?: boolean; className?: s
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
-      if (frame) cancelAnimationFrame(frame);
+      if (pending.frame) cancelAnimationFrame(pending.frame);
     };
   }, []);
 
