@@ -22,11 +22,12 @@ let createObjectURL: ReturnType<typeof vi.fn<(blob: Blob) => string>>;
 let revokeObjectURL: ReturnType<typeof vi.fn<(url: string) => void>>;
 
 function renderIO(over: Partial<Parameters<typeof VaultIO>[0]> = {}) {
-  const onImport = vi.fn<(links: LinkItem[]) => void>();
+  const onImport = vi.fn<(links: LinkItem[], categories: string[]) => void>();
   const getLinks = over.getLinks ?? (() => []);
+  const getCategories = over.getCategories ?? (() => []);
   const getTitle = over.getTitle ?? (() => "T");
-  render(<VaultIO getLinks={getLinks} getTitle={getTitle} onImport={onImport} />);
-  return { onImport, getLinks, getTitle };
+  render(<VaultIO getLinks={getLinks} getCategories={getCategories} getTitle={getTitle} onImport={onImport} />);
+  return { onImport, getLinks, getCategories, getTitle };
 }
 
 // Fire a JSON file through the hidden import input and let the async handler run.
@@ -68,17 +69,24 @@ describe("VaultIO — export", () => {
     expect(clickSpy).not.toHaveBeenCalled();
   });
 
-  it("downloads the links (only) as pretty JSON", async () => {
-    const links = [link({ id: "1", url: "https://a.com", title: "A" })];
-    renderIO({ getLinks: () => links, getTitle: () => "Reading" });
+  it("downloads links plus the vault category list as pretty JSON", async () => {
+    const links = [link({ id: "1", url: "https://a.com", title: "A", category: "read" })];
+    renderIO({ getLinks: () => links, getCategories: () => ["read", "watch"], getTitle: () => "Reading" });
     fireEvent.click(screen.getByRole("button", { name: /export links/i }));
 
     expect(createObjectURL).toHaveBeenCalledOnce();
     const text = await objectUrls[0].text();
-    expect(JSON.parse(text)).toEqual(links);
+    expect(JSON.parse(text)).toEqual({ links, categories: ["read", "watch"] });
     // Title is never part of the export payload.
     expect(text).not.toContain("Reading");
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock");
+  });
+
+  it("exports an empty categories list when the vault has none", async () => {
+    renderIO({ getLinks: () => [link()], getCategories: () => [] });
+    fireEvent.click(screen.getByRole("button", { name: /export links/i }));
+    const text = await objectUrls[0].text();
+    expect(JSON.parse(text)).toEqual({ links: [link()], categories: [] });
   });
 
   it("names the file from a slugified title plus the date", () => {
