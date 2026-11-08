@@ -24,7 +24,7 @@
   "dependencies": {
     "@upstash/ratelimit": "2.2.0",
     "@upstash/redis": "1.41.0",
-    "hash-wasm": "4.12.0",
+    "hash-wasm": "4.13.0",
     "link-preview-js": "5.0.1",
     "motion": "14.10.1",
     "next": "16.4.5",
