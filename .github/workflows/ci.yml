@@ -31,5 +31,6 @@ jobs:
 
       - name: NextJS Typegen
         run: pnpm next typegen
+
       - name: Run checks
         run: pnpm check
