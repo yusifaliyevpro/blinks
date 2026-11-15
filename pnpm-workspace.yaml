@@ -9,5 +9,3 @@ trustPolicyExclude:
 allowBuilds:
   sharp: true
   unrs-resolver: true
-minimumReleaseAgeExclude:
-  - "@upstash/ratelimit@2.2.0"
