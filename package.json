@@ -38,7 +38,7 @@
     "@rolldown/plugin-babel": "0.3.1",
     "@tailwindcss/postcss": "4.3.5",
     "@testing-library/dom": "10.4.2",
-    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/jest-dom": "8.0.0",
     "@testing-library/react": "16.3.3",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
@@ -54,7 +54,7 @@
     "react-doctor": "0.9.23",
     "tailwindcss": "4.3.5",
     "typescript": "7.0.2",
-    "vitest": "5.1.0"
+    "vitest": "5.1.1"
   },
   "engines": {
     "node": ">=22.12.0"
