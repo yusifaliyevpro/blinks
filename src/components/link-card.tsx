@@ -35,7 +35,7 @@ export function LinkCard({ link, index, onDelete, pulse = 0 }: LinkCardProps) {
     if (!card) return undefined;
 
     card.classList.remove("pulse-highlight");
-    void card.offsetWidth; // force reflow so the animation restarts on repeats
+    card.getBoundingClientRect(); // force reflow so the animation restarts on repeats
     card.classList.add("pulse-highlight");
 
     const onEnd = () => card.classList.remove("pulse-highlight");
